@@ -1,0 +1,8 @@
+{
+  "appId": "com.kenhaynes.datum",
+  "appName": "Datum Training",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always"
+  }
+}

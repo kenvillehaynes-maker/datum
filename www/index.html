@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<meta name="color-scheme" content="dark">
+<title>Datum Training</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root{
+    color-scheme:dark;
+    /* SiC Sentinel palette on dark: Forest green primary, fault-class colours as accents */
+    --bg:#0f0f0e; --surface:#1a1a18; --surface2:#23231f;
+    --fg:#f5edd8; --fg-dim:#b8b0a0; --fg-faint:#7a7468;
+    /* Forest primary (SiC Sentinel stat accent) - darker for surfaces, brighter for text/icons on dark bg */
+    --green:#0F6E56; --green-bright:#3FA686;
+    /* Solder amber (SiC Sentinel fault) - for checkpoint targets and warnings */
+    --amber:#BA7517;
+    /* Gate Oxide red (SiC Sentinel fault) - for race tag and high-priority warnings */
+    --red:#A32D2D;
+    /* Bond Wire blue (SiC Sentinel fault) - for secondary accents like links, info */
+    --blue:#378ADD;
+    /* Die Attach purple (SiC Sentinel fault) - for strength session theming */
+    --purple:#534AB7;
+    /* Brown (SiC Sentinel section heads) - shifted lighter for dark-bg readability */
+    --tan:#C19A6B;
+    --line:rgba(245,237,216,0.10);
+    --done:#3FA686;
+    --shadow:rgba(0,0,0,0.5);
+    --shadow-strong:rgba(0,0,0,0.7);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:var(--bg);background-color:var(--bg);-webkit-text-size-adjust:100%;min-height:100vh}
+  body{background:var(--bg);color:var(--fg);font-family:'Inter',sans-serif;line-height:1.5;
+    padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 40px);min-height:100vh}
+  .wrap{max-width:560px;margin:0 auto;padding:0 18px}
+
+  /* Header */
+  header{padding:30px 18px 22px;max-width:560px;margin:0 auto}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--green-bright)}
+  header h1{font-family:'Fraunces',serif;font-weight:900;font-size:2.7rem;letter-spacing:-0.03em;line-height:1.02;margin:10px 0 8px;
+    color:#0f6e56;
+    background:linear-gradient(120deg,#0f6e56 0%,#0F6E56 45%,#3FA686 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    padding-bottom:2px}
+  /* if gradient text unsupported, the solid color above still shows */
+  @supports not (-webkit-background-clip:text){ header h1{-webkit-text-fill-color:#3FA686;color:#3FA686} }
+  header .sub{font-size:0.85rem;color:var(--fg-dim)}
+
+  /* Progress dashboard */
+  .ring{transform:rotate(-90deg)}
+
+  /* collapsible sections */
+  details{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px var(--shadow)}
+  summary{padding:16px 18px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:0.9rem}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{color:var(--fg-faint);transition:transform .2s}
+  details[open] summary .chev{transform:rotate(90deg)}
+  .section-body{padding:0 18px 18px}
+
+  /* pace table */
+  table{width:100%;border-collapse:collapse;font-size:0.8rem}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-faint);font-weight:600}
+  td.pace{font-family:'JetBrains Mono',monospace;color:var(--green-bright)}
+  td .feel{color:var(--fg-dim);font-size:0.74rem}
+
+  /* phase + week */
+  .phase-label{font-family:'JetBrains Mono',monospace;font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin:26px 4px 10px;display:flex;gap:10px;align-items:center}
+  .phase-label::after{content:'';flex:1;height:1px;background:var(--line)}
+  .phase-note{font-size:0.76rem;color:var(--fg-faint);font-style:italic;margin:0 4px 14px;line-height:1.5}
+
+  .week{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px var(--shadow)}
+  .week.trial{border-color:rgba(214,166,74,0.4)}
+  .week-head{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid transparent;cursor:pointer;list-style:none;user-select:none;gap:8px}
+  .week-head::-webkit-details-marker{display:none}
+  .week[open] .week-head{border-bottom-color:var(--line)}
+  .week-head .week-chev{font-size:0.75rem;color:var(--fg-faint);transition:transform 0.2s ease;flex:0 0 auto;margin-left:4px}
+  .week[open] .week-chev{transform:rotate(180deg)}
+  .week-head:hover{background:rgba(63,166,134,0.04)}
+  .week.complete .week-head:hover{background:rgba(47,143,91,0.10)}
+  .week-head .wn{flex:1;min-width:0}
+  .week-head .wn{font-family:'Fraunces',serif;font-weight:600;font-size:1.05rem}
+  .week-head .wc{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--fg-dim)}
+  .week-head .wdates{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--fg-faint);font-weight:400;margin-left:6px}
+  .week-done-badge{font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:#fff;background:var(--green);padding:2px 8px;border-radius:99px;margin-left:10px;vertical-align:middle}
+  .week.complete .week-head{background:rgba(47,143,91,0.06)}
+
+  .session{display:flex;gap:13px;padding:14px 18px;border-bottom:1px solid var(--line);align-items:flex-start}
+  .session:last-child{border-bottom:none}
+  .check{flex-shrink:0;width:26px;height:26px;border-radius:8px;border:2px solid var(--fg-faint);margin-top:2px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;background:transparent}
+  .check.done{background:var(--done);border-color:var(--done)}
+  .check svg{width:14px;height:14px;stroke:#fff;stroke-width:3.5;fill:none;opacity:0;transition:opacity .15s}
+  .check.done svg{opacity:1}
+  .s-body{flex:1;min-width:0}
+  .s-day{font-family:'JetBrains Mono',monospace;font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:3px}
+  .s-day .tag{padding:1px 7px;border-radius:99px;margin-left:6px;font-size:0.6rem}
+  .tag.quality{background:rgba(47,143,91,0.13);color:var(--green-bright)}
+  .tag.easy{background:rgba(154,168,157,0.14);color:var(--fg-dim)}
+  .tag.long{background:rgba(176,125,31,0.14);color:var(--amber)}
+  .tag.trial,.tag.race{background:rgba(194,90,69,0.14);color:#b8472f}
+  .tag.strength{background:rgba(106,90,205,0.14);color:#5b4cb3}
+  .tag.rest{background:rgba(120,120,120,0.13);color:var(--fg-faint)}
+  .tag.bike{background:rgba(55,138,221,0.13);color:#378ADD}
+  .pacechip{margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--green-bright);background:rgba(47,143,91,0.10);padding:2px 8px;border-radius:99px;letter-spacing:0}
+  .tmchip{display:inline-block;margin-left:6px;padding:2px 7px;background:rgba(55,138,221,0.08);border:1px solid rgba(55,138,221,0.25);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#378ADD;font-weight:500;letter-spacing:0.02em}
+  .hrchip{margin-left:6px;font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#b8472f;background:rgba(194,90,69,0.10);padding:2px 8px;border-radius:99px;letter-spacing:0}
+  .s-title{font-weight:600;font-size:0.92rem;margin-bottom:3px}
+  .s-title.done{text-decoration:line-through;color:var(--fg-faint)}
+  .s-detail{font-size:0.78rem;color:var(--fg-dim)}
+  .s-why{font-size:0.74rem;color:var(--fg-faint);font-style:italic;margin-top:5px;line-height:1.45}
+  .note-input{width:100%;margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);font-family:inherit;font-size:0.76rem}
+  .note-input::placeholder{color:var(--fg-faint)}
+  .note-input:not(:placeholder-shown){border-color:var(--green)}
+
+  /* trial input */
+  .trial-box{padding:16px 18px;background:rgba(214,166,74,0.06);border-top:1px solid var(--line)}
+  .trial-box label{font-size:0.74rem;color:var(--amber);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .trial-box input{width:100%;padding:11px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:1rem}
+  .verdict{margin-top:12px;font-size:0.84rem;line-height:1.5;padding:12px;border-radius:8px;background:var(--surface2)}
+  .verdict.live{color:var(--green-bright)} .verdict.on{color:var(--fg)} .verdict.reset{color:#b8472f}
+
+  .note{font-size:0.8rem;color:var(--fg-dim);line-height:1.55;padding-left:16px;position:relative;margin-bottom:9px}
+  .note::before{content:'';position:absolute;left:0;top:9px;width:5px;height:5px;background:var(--green);border-radius:50%}
+  .callout{font-size:0.8rem;color:var(--fg-dim);line-height:1.55;background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px}
+  .disclaimer{font-size:0.72rem;color:var(--fg-faint);line-height:1.5;border:1px dashed var(--line);border-radius:10px;padding:14px;margin:18px 0}
+  .reset-btn{width:100%;padding:12px;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--fg-faint);font-size:0.78rem;cursor:pointer;margin-top:8px}
+  .progress-io{display:flex;gap:8px;margin-top:16px}
+  .io-btn{flex:1;padding:11px;background:transparent;border:1px solid var(--green);border-radius:10px;color:var(--green);font-size:0.76rem;cursor:pointer;font-family:inherit}
+  .io-hint{font-size:0.72rem;color:var(--fg-faint);text-align:center;margin:6px 0 0;line-height:1.5}
+  .footer{text-align:center;font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--fg-faint);margin-top:30px;line-height:1.8}
+
+  /* edit mode */
+  .bottom-actions{display:flex;justify-content:center;margin:16px 0 4px}
+  .editbtn{padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg-dim);font-size:0.74rem;cursor:pointer;font-family:'Inter',sans-serif}
+  .editbtn.on{background:var(--green);border-color:var(--green);color:#fff}
+  .edit-field{width:100%;font-family:inherit;font-size:inherit;color:var(--fg);background:#fff;border:1px solid var(--green);border-radius:6px;padding:6px 8px;margin:2px 0}
+  .edit-field.pace{font-family:'JetBrains Mono',monospace;color:var(--green-bright)}
+  .export-btn{width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;margin-top:8px}
+  .edit-hint{font-size:0.74rem;color:var(--fg-faint);text-align:center;margin:6px 0 0;line-height:1.5}
+  .next-card{background:var(--surface);border:1px solid var(--green);border-radius:14px;padding:16px 18px;margin-bottom:16px;box-shadow:0 1px 3px var(--shadow)}
+  .next-label{font-family:'JetBrains Mono',monospace;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:6px}
+  .next-body{font-size:0.95rem;font-weight:600;color:var(--fg)}
+  .next-body .next-meta{display:block;font-size:0.76rem;font-weight:400;color:var(--fg-dim);margin-top:4px;font-family:'JetBrains Mono',monospace}
+  .catchup-msg{font-size:0.78rem;color:var(--fg-dim);line-height:1.5;background:rgba(214,166,74,0.08);border:1px solid rgba(214,166,74,0.25);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+  .projection{margin-top:8px;font-size:0.78rem;color:var(--fg-dim);line-height:1.5;font-family:'JetBrains Mono',monospace}
+  .ticon{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px;margin-right:4px}
+  .celebrate{background:linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);border-radius:18px;padding:26px 22px;margin-bottom:16px;text-align:center;color:#fff;box-shadow:0 6px 24px rgba(47,143,91,0.28);animation:celebrate-in .6s cubic-bezier(.22,1,.36,1)}
+  @keyframes celebrate-in{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:none}}
+  .celebrate-burst{font-size:2.4rem;line-height:1;margin-bottom:8px;animation:burst-pop .6s .15s both}
+  @keyframes burst-pop{0%{transform:scale(0) rotate(-20deg)}70%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+  .celebrate-title{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;margin-bottom:6px}
+  .celebrate-sub{font-size:0.82rem;line-height:1.5;opacity:0.92;margin-bottom:16px;max-width:340px;margin-left:auto;margin-right:auto}
+  .celebrate-label{display:block;font-family:'JetBrains Mono',monospace;font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;opacity:0.9;margin-bottom:8px}
+  #raceTimeInput{width:160px;padding:11px;border:none;border-radius:8px;background:rgba(255,255,255,0.95);color:#1a201c;font-family:'JetBrains Mono',monospace;font-size:1.1rem;text-align:center}
+  .celebrate-verdict{margin-top:14px;font-size:0.9rem;font-weight:600;line-height:1.5;min-height:1px}
+  .trial-box.race{background:rgba(47,143,91,0.06)}
+  .trial-box.race label{color:var(--green)}
+  .actual-row{display:flex;gap:8px;margin-top:8px}
+  .actual-pace{flex:2}
+  .actual-rpe{flex:1}
+  .actual-row input{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:0.74rem;width:100%}
+  .actual-row input::placeholder{color:var(--fg-faint);font-family:'Inter',sans-serif}
+  .actual-row input:not(:placeholder-shown){border-color:var(--green)}
+  .actual-compare{font-size:0.72rem;margin-top:6px;line-height:1.4;font-family:'JetBrains Mono',monospace}
+  .actual-compare .on-target{color:var(--green-bright)}
+  .actual-compare .off-target{color:var(--amber)}
+  .log-stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:0.82rem}
+  .log-stat-row:last-child{border-bottom:none}
+  .log-stat-row .lbl{color:var(--fg-dim)}
+  .log-stat-row .val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--fg)}
+  .log-stat-row .val.good{color:var(--green-bright)}
+  .log-empty{font-size:0.8rem;color:var(--fg-faint);line-height:1.5}
+
+  .emma-badge{display:flex;align-items:center;gap:12px;margin-top:16px}
+  .emma-avatar{position:relative;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:1.25rem;color:#fff;background:linear-gradient(135deg,#0f6e56 0%,#0F6E56 55%,#3FA686 100%);box-shadow:0 4px 14px rgba(15,110,86,0.35)}
+  .emma-sparkle{position:absolute;top:-4px;right:-4px;font-size:0.7rem;color:#ffd60a;animation:emma-twinkle 2.2s ease-in-out infinite}
+  @keyframes emma-twinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8) rotate(20deg)}}
+  .emma-meta{display:flex;flex-direction:column;line-height:1.2}
+  .emma-hi{font-family:'Fraunces',serif;font-weight:600;font-size:1.05rem;color:var(--fg)}
+  .emma-sub{font-size:0.78rem;color:var(--fg-dim)}
+  .footer-credit{display:inline-block;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);opacity:0.7}
+  .edit-field.text-area{resize:vertical;min-height:60px;font-family:'Inter',sans-serif;line-height:1.5}
+  .pb-card{display:flex;align-items:center;gap:14px;margin-top:10px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#0f6e56 0%,#0F6E56 55%,#3FA686 100%);box-shadow:0 4px 16px rgba(15,110,86,0.3)}
+  .pb-medal{width:30px;height:30px;flex-shrink:0;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:0.95}
+  .pb-meta{display:flex;flex-direction:column;line-height:1.1}
+  .pb-label{font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.85)}
+  .pb-time{font-family:'Fraunces',serif;font-weight:900;font-size:1.9rem;color:#fff;line-height:1.05;margin-top:2px}
+  .trial-inline{margin-top:10px;padding:12px 14px;background:rgba(214,166,74,0.07);border-radius:10px;border:1px solid var(--line)}
+  .trial-inline.race{background:rgba(47,143,91,0.07)}
+  .trial-inline label{font-size:0.72rem;color:var(--amber);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .checkpoint-target{font-size:0.75rem;color:var(--fg-dim);margin-bottom:8px;padding:6px 8px;background:rgba(15,110,86,0.05);border-left:3px solid #0f6e56;border-radius:4px}
+  .checkpoint-target strong{color:#0f6e56;font-weight:600}
+  .trial-inline.race label{color:var(--green)}
+  .trial-inline input{width:100%;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:1rem}
+  .vdot-bar{display:flex;align-items:center;gap:10px;margin-top:0;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;flex-wrap:wrap}
+
+  /* Collapsible VDOT card (replaces the header-level vdot-bar) */
+  .vdot-card{margin:20px 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .vdot-card summary{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;user-select:none;font-family:'JetBrains Mono',monospace}
+  .vdot-card summary::-webkit-details-marker{display:none}
+  .vdot-card-label{font-size:0.65rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);flex:0 0 auto}
+  .vdot-card-value{font-size:0.95rem;font-weight:600;color:var(--green-bright);flex:1}
+  .vdot-card-chevron{font-size:0.8rem;color:var(--fg-faint);transition:transform 0.2s ease}
+  .vdot-card[open] .vdot-card-chevron{transform:rotate(180deg)}
+  .vdot-card-body{padding:0 14px 14px 14px}
+  .vdot-card-body .vdot-bar{border:none;background:transparent;padding:0;margin:0}
+
+  .vdot-label{font-family:'JetBrains Mono',monospace;font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint)}
+  .vdot-select{font-family:'JetBrains Mono',monospace;font-size:0.85rem;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--green-bright);font-weight:600;cursor:pointer}
+  .vdot-hint{font-size:0.7rem;color:var(--fg-faint);font-style:italic;flex-basis:100%;margin-top:2px}
+  .strength-log{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .strength-row{padding:10px 12px;background:rgba(106,90,205,0.05);border:1px solid rgba(106,90,205,0.18);border-radius:8px}
+  .strength-row-head{display:flex;align-items:center;margin-bottom:6px;gap:6px}
+  .strength-name-input{flex:2;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg);min-width:0}
+  .strength-target-input{flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:0.7rem;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg-faint);min-width:0}
+  .strength-remove{width:26px;height:26px;flex-shrink:0;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg-faint);font-size:1.1rem;line-height:1;cursor:pointer;padding:0}
+  .strength-remove:hover{background:rgba(180,60,60,0.08);border-color:rgba(180,60,60,0.3);color:#a04040}
+  .strength-inputs{display:flex;gap:6px}
+  .strength-inputs input{flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg);min-width:0}
+  .strength-last{margin-top:5px;font-size:0.66rem;color:var(--fg-faint);font-style:italic}
+  .strength-add{padding:8px 12px;background:transparent;border:1px dashed rgba(106,90,205,0.4);border-radius:8px;color:#5b4cb3;font-family:'JetBrains Mono',monospace;font-size:0.74rem;cursor:pointer;text-align:center}
+  .strength-add:hover{background:rgba(106,90,205,0.06);border-style:solid}
+  .checkpoint-verdict{margin-bottom:8px;padding:8px 10px;background:rgba(15,110,86,0.06);border-left:3px solid #0f6e56;border-radius:6px;font-size:0.78rem;color:var(--fg);line-height:1.4}
+  .vdot-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f6e56;color:#fff;padding:12px 18px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:0.82rem;box-shadow:0 6px 24px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.3s ease, transform 0.3s ease;z-index:9999;max-width:90%;text-align:center}
+  .vdot-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .vdot-select:disabled{opacity:0.6;cursor:not-allowed}
+  @media print {
+    body { background:#fff; color:#000; font-size:11pt }
+    .bottom-actions, .header-actions, .vdot-bar, button, .actual-row, .strength-inputs input, .check, #celebrate { display:none !important }
+    .week, .session { break-inside:avoid; box-shadow:none; border:1px solid #ccc }
+    .week:not([open]) > *:not(.week-head){ display:block !important }
+    .week-chev{display:none !important}
+    .phase-label { break-before:page; break-inside:avoid }
+    .week-head { background:#f5f5f5 !important }
+    a { color:#000; text-decoration:none }
+    .strength-log, .strength-row { background:#fafafa !important; border:1px solid #ddd }
+  }
+  /* Extra dashboard stats */
+
+  /* Analytics section */
+  .analytics{margin:24px 0;padding:18px 16px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+  .analytics-header{margin-bottom:14px}
+  .analytics-title{margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:1.1rem;color:var(--fg)}
+  .analytics-sub{font-size:0.72rem;color:var(--fg-faint);letter-spacing:0.04em;text-transform:uppercase;display:block;margin-top:2px}
+  .chart-container{position:relative;width:100%;min-height:240px}
+  .chart-svg{width:100%;height:auto;display:block}
+  .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--fg-faint);font-style:italic;font-size:0.85rem;text-align:center;padding:20px}
+
+  /* Chart elements (styled in SVG via CSS) */
+  .chart-grid{stroke:var(--line);stroke-width:1;fill:none}
+  .chart-target-line{stroke:#0f6e56;stroke-width:1.5;stroke-dasharray:4 4;fill:none}
+  .chart-axis-text{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg-faint)}
+  .chart-target-text{font-family:'JetBrains Mono',monospace;font-size:10px;fill:#0f6e56;font-weight:600}
+  .chart-line{stroke:var(--green-bright);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .chart-point{fill:var(--green-bright);stroke:#fff;stroke-width:2}
+  .chart-point-best{fill:#d4af37;stroke:#fff;stroke-width:2}
+  .chart-cp-target{fill:none;stroke:var(--amber);stroke-width:1.5;stroke-dasharray:2 2}
+  .chart-cp-marker{fill:var(--amber);opacity:0.5}
+  .chart-point-label{font-family:'JetBrains Mono',monospace;font-size:9px;fill:var(--fg-dim)}
+
+  /* Strength sparklines */
+  .strength-spark{display:inline-block;vertical-align:middle;margin-left:8px}
+  .spark-line{stroke:#5b4cb3;stroke-width:1.5;fill:none}
+  .spark-area{fill:rgba(91,76,179,0.15);stroke:none}
+  .spark-dot{fill:#5b4cb3}
+  .spark-dot-current{fill:#5b4cb3;stroke:#fff;stroke-width:1.5}
+  .strength-last-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+
+  /* Dark mode component adjustments */
+  .strength-row{background:rgba(83,74,183,0.08);border-color:rgba(83,74,183,0.25)}
+  .strength-add{border-color:rgba(83,74,183,0.5);color:#9089d4}
+  .strength-add:hover{background:rgba(83,74,183,0.10)}
+  .tag.strength{background:rgba(83,74,183,0.22);color:#9089d4;border:1px solid rgba(83,74,183,0.35)}
+  .tag.rest{background:rgba(184,176,160,0.10);color:var(--fg-faint);border:1px solid rgba(184,176,160,0.18)}
+  .tag.bike{background:rgba(55,138,221,0.18);color:#6eb0ee;border:1px solid rgba(55,138,221,0.35)}
+  .tag.quality{background:rgba(63,166,134,0.18);color:var(--green-bright);border:1px solid rgba(63,166,134,0.35)}
+  .tag.easy{background:rgba(193,154,107,0.12);color:var(--tan);border:1px solid rgba(193,154,107,0.25)}
+  .tag.long{background:rgba(63,166,134,0.10);color:var(--green-bright)}
+  .tag.trial,.tag.race{background:rgba(163,45,45,0.25);color:#d97070;border:1px solid rgba(163,45,45,0.5)}
+  .tmchip{background:rgba(55,138,221,0.10);border-color:rgba(55,138,221,0.35);color:#6eb0ee}
+  .checkpoint-target{background:rgba(63,166,134,0.10);border-color:#3FA686}
+  .checkpoint-target strong{color:#3FA686}
+  .checkpoint-verdict{background:rgba(63,166,134,0.08);border-color:#3FA686}
+  .trial-inline{background:rgba(212,160,79,0.08);border-color:var(--line)}
+  .trial-inline.race{background:rgba(63,166,134,0.08)}
+  .trial-inline label{color:#BA7517;font-weight:600}
+  .trial-inline.race label{color:var(--green-bright)}
+  .chart-target-line{stroke:#3FA686}
+  .chart-target-text{fill:#3FA686}
+  .chart-line{stroke:#3FA686}
+  .chart-point{fill:#3FA686;stroke:var(--surface)}
+  .chart-point-best{stroke:var(--surface)}
+  .chart-cp-marker{fill:#BA7517}
+  .spark-line{stroke:#9089d4}
+  .spark-area{fill:rgba(169,156,242,0.18)}
+  .spark-dot,.spark-dot-current{fill:#9089d4}
+  .spark-dot-current{stroke:var(--surface)}
+
+
+  /* Today card - the primary view */
+  .today-card{margin:20px 0;padding:18px 18px 16px;background:var(--surface);border:1px solid var(--green);border-radius:14px;box-shadow:0 2px 12px var(--shadow)}
+  .today-card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .today-card-kicker{font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--green-bright);font-weight:600}
+  .today-card-date{font-size:0.7rem;color:var(--fg-faint);font-family:'JetBrains Mono',monospace}
+  .today-card-day{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;color:var(--fg);margin-bottom:2px}
+  .today-card-title{font-family:'Fraunces',serif;font-weight:500;font-size:1.05rem;color:var(--fg);margin-bottom:8px;line-height:1.3}
+  .today-card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .today-card-detail{font-size:0.88rem;color:var(--fg-dim);line-height:1.5;margin-bottom:14px}
+  .today-card-actions{display:flex;gap:10px;align-items:center}
+  .today-card-check{flex:0 0 36px;width:36px;height:36px;border:2px solid var(--green);border-radius:50%;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s ease}
+  .today-card-check:hover{background:rgba(63,166,134,0.10)}
+  .today-card-check svg{width:18px;height:18px;stroke:var(--green);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+  .today-card.done .today-card-check{background:var(--green);border-color:var(--green)}
+  .today-card.done .today-card-check svg{stroke:#fff;opacity:1}
+  .today-card-status{font-size:0.85rem;color:var(--fg-dim)}
+  .today-card.done .today-card-status{color:var(--green-bright);font-weight:500}
+  .today-card-rest .today-card-day,.today-card-rest .today-card-title{color:var(--fg-dim)}
+  .today-card-empty{text-align:center;padding:24px 16px;color:var(--fg-faint)}
+
+  /* View mode controls */
+  .view-controls{display:flex;gap:10px;margin:8px 0 4px;flex-wrap:wrap}
+  .view-btn{flex:1;min-width:140px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:0.82rem;cursor:pointer;text-align:center;transition:all 0.15s ease}
+  .view-btn:hover{background:var(--surface2);border-color:var(--green)}
+  .view-btn.active{background:rgba(63,166,134,0.10);border-color:var(--green);color:var(--green-bright)}
+  .view-btn-secondary{color:var(--fg-dim)}
+
+  /* View mode visibility - controls which weeks are shown */
+  body[data-view="today"] #weeks{display:none}
+  body[data-view="today"] .analytics{display:none}
+  body[data-view="week"] #weeks .week{display:none}
+  body[data-view="week"] #weeks .week.current-week{display:block}
+  body[data-view="week"] #weeks .phase-label,
+  body[data-view="week"] #weeks .phase-note{display:none}
+  body[data-view="week"] #weeks .current-week-phase{display:block}
+  body[data-view="all"] #weeks .week,
+  body[data-view="all"] #weeks .phase-label,
+  body[data-view="all"] #weeks .phase-note{display:block}
+
+  /* Hide IO buttons / VDOT card in non-all views to reduce clutter */
+  body[data-view="today"] .io-row,
+  body[data-view="today"] .io-hint,
+  body[data-view="today"] #vdotCard,
+  body[data-view="today"] #resetBtn,
+  body[data-view="today"] .bottom-actions{display:none}
+  body[data-view="week"] .io-row,
+  body[data-view="week"] .io-hint,
+  body[data-view="week"] #vdotCard,
+  body[data-view="week"] #resetBtn,
+  body[data-view="week"] .bottom-actions{display:none}
+
+
+  /* Bottom nav - fixed gym-app style */
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:100;box-shadow:0 -4px 16px var(--shadow)}
+  .nav-tab{flex:1;background:transparent;border:none;color:var(--fg-faint);padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:color 0.15s ease;font-family:inherit}
+  .nav-tab:hover{color:var(--fg-dim)}
+  .nav-tab.nav-tab-active{color:var(--green-bright)}
+  .nav-icon{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nav-label{font-size:0.65rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+  body{padding-bottom:calc(80px + env(safe-area-inset-bottom)) !important}
+
+  /* App view switching - controlled by data-app-view on body */
+  body[data-app-view="today"] .app-view-workouts, body[data-app-view="today"] .app-view-analytics{display:none}
+  body[data-app-view="workouts"] .app-view-today, body[data-app-view="workouts"] .app-view-analytics{display:none}
+  body[data-app-view="analytics"] .app-view-today, body[data-app-view="analytics"] .app-view-workouts{display:none}
+
+  /* Hide the old View buttons - now replaced by bottom nav */
+  .view-controls{display:none !important}
+
+  /* Today hero card - bigger, brighter, gym-app feel */
+  .today-hero{margin:16px 0 20px;padding:22px 20px 18px;background:linear-gradient(145deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--green);border-radius:18px;box-shadow:0 4px 20px rgba(63,166,134,0.10),0 1px 3px var(--shadow);position:relative;overflow:hidden}
+  .today-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green) 0%,var(--green-bright) 50%,var(--green) 100%)}
+  .today-hero-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px}
+  .today-hero-kicker{font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--green-bright);font-weight:700;font-family:'JetBrains Mono',monospace}
+  .today-hero-date{font-size:0.7rem;color:var(--fg-faint);font-family:'JetBrains Mono',monospace}
+  .today-hero-main{display:flex;align-items:center;gap:18px;margin-bottom:16px}
+  .today-hero-icon{flex:0 0 60px;width:60px;height:60px;border-radius:14px;background:rgba(63,166,134,0.12);display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(63,166,134,0.25)}
+  .today-hero-icon svg{width:30px;height:30px;stroke:var(--green-bright);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .today-hero-meta{flex:1;min-width:0}
+  .today-hero-day{font-family:'Fraunces',serif;font-weight:600;font-size:1.4rem;color:var(--fg);line-height:1.1;margin-bottom:3px}
+  .today-hero-title{font-family:'Fraunces',serif;font-weight:500;font-size:1rem;color:var(--fg-dim);line-height:1.3}
+  .today-hero-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .today-hero-detail{font-size:0.88rem;color:var(--fg-dim);line-height:1.55;margin-bottom:18px;padding:12px 14px;background:rgba(0,0,0,0.18);border-radius:10px;border-left:3px solid var(--green)}
+  .today-hero-actions{display:flex;gap:12px;align-items:center}
+  .today-hero-check{flex:0 0 56px;width:56px;height:56px;border:3px solid var(--green);border-radius:50%;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s ease;position:relative}
+  .today-hero-check:hover{background:rgba(63,166,134,0.10);transform:scale(1.04)}
+  .today-hero-check:active{transform:scale(0.96)}
+  .today-hero-check svg{width:26px;height:26px;stroke:var(--green);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity 0.2s ease}
+  .today-hero.done .today-hero-check{background:var(--green);border-color:var(--green);box-shadow:0 0 24px rgba(63,166,134,0.4)}
+  .today-hero.done .today-hero-check svg{stroke:#0f1410;opacity:1}
+  .today-hero-status{flex:1;font-size:0.88rem;color:var(--fg-dim);font-weight:500}
+  .today-hero.done .today-hero-status{color:var(--green-bright);font-weight:600}
+
+  /* Streak chip + week progress mini bar */
+  .week-progress{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:12px 14px;background:rgba(63,166,134,0.06);border:1px solid rgba(63,166,134,0.18);border-radius:12px}
+  .week-progress-label{font-size:0.7rem;color:var(--fg-faint);letter-spacing:0.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;flex:0 0 auto}
+  .week-progress-bar{flex:1;height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}
+  .week-progress-fill{height:100%;background:linear-gradient(90deg,var(--green) 0%,var(--green-bright) 100%);border-radius:99px;transition:width 0.4s ease}
+  .week-progress-text{font-size:0.78rem;color:var(--fg);font-weight:600;font-family:'JetBrains Mono',monospace}
+
+  /* Stat hero cards (gym-app style big numbers) */
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px var(--shadow)}
+  .stat-card-icon{width:28px;height:28px;border-radius:8px;background:rgba(63,166,134,0.12);display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px}
+  .stat-card-icon svg{width:16px;height:16px;stroke:var(--green-bright);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .stat-card-value{font-family:'Fraunces',serif;font-weight:600;font-size:1.55rem;color:var(--fg);line-height:1.1}
+  .stat-card-value.amber{color:var(--amber)}
+  .stat-card-value.green{color:var(--green-bright)}
+  .stat-card-label{font-size:0.66rem;color:var(--fg-faint);letter-spacing:0.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+</style>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230f6e56%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2244%22%20font-family%3D%22-apple-system%2CBlinkMacSystemFont%2CInter%2Csans-serif%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E20%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230f6e56%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2244%22%20font-family%3D%22-apple-system%2CBlinkMacSystemFont%2CInter%2Csans-serif%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E20%3C/text%3E%3C/svg%3E">
+  <meta name="description" content="Datum Training. Train from your baseline. A tracker that recalibrates your plan from your Apple Health data, with auto-VDOT updates.">
+  <meta property="og:title" content="Datum Training">
+  <meta property="og:description" content="A 28-week sub-20 5K training tracker. 3 runs per week, bike cross-training, strength integration.">
+  <meta property="og:type" content="website">
+</head>
+<body>
+<header>
+  <h1 id="title"></h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="emma-badge">
+    <div class="emma-avatar" id="emmaAvatar"><span id="emmaInitial">E</span><span class="emma-sparkle">✧</span></div>
+    <div class="emma-meta" id="emmaMeta"></div>
+  </div>
+</header>
+<div class="wrap">
+
+  <div class="app-view-analytics"><section class="analytics" id="analytics">
+    <div class="analytics-header">
+      <h2 class="analytics-title">5K progression</h2>
+      <span class="analytics-sub">Logged trial times vs sub-20 target</span>
+    </div>
+    <div class="chart-container">
+      <svg id="progressChart" viewBox="0 0 600 280" preserveAspectRatio="xMidYMid meet" class="chart-svg">
+        <!-- chart content drawn by JS -->
+      </svg>
+      <div class="chart-empty" id="chartEmpty">Log a trial time at any checkpoint week to see your progression here.</div>
+    </div>
+  </section></div><!-- end app-view-analytics -->
+
+  <div class="next-card" id="nextCard" style="display:none">
+    <div class="next-label">Next session</div>
+    <div class="next-body" id="nextBody"></div>
+  </div>
+  <p class="catchup-msg" id="catchupMsg" style="display:none">Missed a session or two? That is completely fine. Hitting around 90 percent of the plan still gets you there. Just pick up from the next session, no need to make it up.</p>
+  <div class="celebrate" id="celebrate" style="display:none">
+    <div class="celebrate-burst">🎉</div>
+    <div class="celebrate-title">Race day complete</div>
+    <div class="celebrate-sub">Eight weeks done. However it went, you showed up and finished the block. Be proud of that.</div>
+    <label class="celebrate-label" for="raceTimeInput">Log your race time (mm:ss)</label>
+    <input type="text" id="raceTimeInput" placeholder="19:59" inputmode="text">
+    <div class="celebrate-verdict" id="raceVerdict"></div>
+  </div>
+
+
+
+  <div class="app-view-today">
+    <div id="todayHero" class="today-hero"></div>
+    <div id="weekProgressBar" class="week-progress"></div>
+    <div id="statGrid" class="stat-grid"></div>
+  </div>
+
+  <!-- app-view splits below -->
+  <div class="app-view-workouts"><div id="viewControls" class="view-controls">
+    <button type="button" class="view-btn" id="viewWeekBtn">View this week</button>
+    <button type="button" class="view-btn view-btn-secondary" id="viewAllBtn">View full plan</button>
+  </div>
+  <div id="weeks"></div>
+
+  <details id="logSummaryDetails" style="display:none">
+    <summary><span>Your training log</span><span class="chev">›</span></summary>
+    <div class="section-body" id="logSummaryBody"></div>
+  </details>
+
+  <details>
+    <summary><span>Listening to your body</span><span class="chev">›</span></summary>
+    <div class="section-body" id="guidanceBody"></div>
+  </details>
+
+
+
+
+  <div class="disclaimer" id="disclaimer"></div>
+
+  <button class="export-btn" id="exportBtn" style="display:none">Export plan to send to client</button>
+  <p class="edit-hint" id="editHint" style="display:none">Editing on. Tap any session title, pace or detail to change it. Export when done to get a clean file for your client.</p>
+  <div class="progress-io">
+    <button class="io-btn" id="saveProgBtn">Save progress to file</button>
+    <button class="io-btn" id="loadProgBtn">Load progress from file</button>
+    <input type="file" id="loadProgInput" accept=".json,application/json" style="display:none">
+  </div>
+  <p class="io-hint" id="ioHint"></p>
+  <details class="vdot-card" id="vdotCard">
+    <summary>
+      <span class="vdot-card-label">Current VDOT</span>
+      <span class="vdot-card-value" id="vdotCardValue">41</span>
+      <span class="vdot-card-chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="vdot-card-body">
+      <div class="vdot-bar">
+        <span class="vdot-label">Manual override</span>
+        <select id="vdotSelect" class="vdot-select">
+          <option value="41">VDOT 41 (starting)</option>
+          <option value="44">VDOT 44</option>
+          <option value="47">VDOT 47</option>
+          <option value="50">VDOT 50 (goal)</option>
+        </select>
+        <span class="vdot-hint" id="vdotHint">Auto-updates when a parkrun unlocks a new band. Override manually if needed.</span>
+      </div>
+    </div>
+  </details>
+  <div class="bottom-actions">
+    <button class="editbtn" id="editToggle">Edit plan</button>
+  </div>
+  <button class="reset-btn" id="resetBtn">Reset all progress</button>
+  </div><!-- end app-view-workouts -->
+  <div class="footer" id="footer"></div>
+</div>
+
+<script>
+// Full plan data extracted faithfully from the source document
+const PLAN = {
+  title: "Sub 20 5K Plan",
+  subtitle: "28 weeks. 2 runs per week, shin-protected. Race Saturday 12 December 2026.",
+  texts: {
+    disclaimer: "28-week shin-protected build to sub-20:00. 2 runs per week (Tue treadmill quality, Thu easy outside) plus two bike days (Wed aerobic + strides, Sun long Z2). Two strength days, one full rest day. Checkpoints every 4 weeks. VDOT shifts automatically when a parkrun earns a new band.",
+    backupHint: "Back up your progress before updating to a new plan version, then load it back in.",
+    footer1: "Built for the road to sub 20",
+    footer2: "Progress saves automatically on this device",
+    footerCredit: "Ken Haynes",
+    emmaName: "Ken's plan",
+    emmaSub: "23:27 to sub-20:00",
+    emmaInitial: "K"
+  },
+
+  vdotPaces: {
+    41: { label:"VDOT 41 (starting)", easy:"5:53-6:27/km", marathon:"5:22/km", threshold:"5:00/km", interval:"4:37/km", repetition:"400@1:44 / 200@52", goal:"4:00/km" },
+    44: { label:"VDOT 44", easy:"5:33-6:04/km", marathon:"5:03/km", threshold:"4:42/km", interval:"4:20/km", repetition:"400@1:38 / 200@49", goal:"4:00/km" },
+    47: { label:"VDOT 47", easy:"5:16-5:45/km", marathon:"4:46/km", threshold:"4:27/km", interval:"4:07/km", repetition:"400@1:33 / 200@46", goal:"4:00/km" },
+    50: { label:"VDOT 50 (goal)", easy:"5:02-5:28/km", marathon:"4:33/km", threshold:"4:15/km", interval:"3:55/km", repetition:"400@1:28 / 200@44", goal:"4:00/km" }
+  },
+  currentVdot: 41,
+  goalSec: 1200,
+  goalNiceLabel: "20:00",
+  goalCelebrateSec: 1230,
+  goalCelebrateLabel: "20:30",
+
+  vdotUnlocks: [
+    { sec: 1335, vdot: 44, label: "VDOT 44 unlocked (you ran under 22:15)" },
+    { sec: 1260, vdot: 47, label: "VDOT 47 unlocked (you ran under 21:00)" },
+    { sec: 1197, vdot: 50, label: "VDOT 50 unlocked (sub-20 achieved)" }
+  ],
+
+  checkpoints: [
+    { week: 4,  targetSec: 1395, targetLabel: "23:15", note: "Phase 1 first checkpoint. Threshold platform building." },
+    { week: 8,  targetSec: 1335, targetLabel: "22:15", note: "End of Phase 1. Should be earning VDOT 44 here." },
+    { week: 12, targetSec: 1290, targetLabel: "21:30", note: "Mid Phase 2. VO2max work paying off." },
+    { week: 16, targetSec: 1260, targetLabel: "21:00", note: "End of Phase 2. Should be earning VDOT 47. Sub-20 is on track if you hit this." },
+    { week: 20, targetSec: 1230, targetLabel: "20:30", note: "Mid Phase 3. Race-pace work translating." },
+    { week: 24, targetSec: 1212, targetLabel: "20:12", note: "End of Phase 3. The dress rehearsal. Sub-20 is reachable from here." }
+  ],
+
+  phases: [
+    {name:"Phase 1: Threshold platform", weeks:"1-8", note:"Treadmill threshold work Tuesday. Re-test parkrun weeks 4 (target 23:15) and 8 (target 22:15). VDOT 44 unlocks at sub-22:15."},
+    {name:"Phase 2: VO2max + critical speed", weeks:"9-16", note:"Tuesday quality rotates to VO2max and critical speed work. Re-test weeks 12 (target 21:30) and 16 (target 21:00). VDOT 47 unlocks at sub-21:00. Strength volume reduced to protect quality runs."},
+    {name:"Phase 3: Race specificity", weeks:"17-24", note:"Goal-pace work on Tuesday. Re-test weeks 20 (target 20:30) and 24 (target 20:12). The week 24 dress rehearsal indicates race-day readiness."},
+    {name:"Phase 4: Sharpen and race", weeks:"25-28", note:"Volume drops, intensity held. Final sharpening then taper. Race Saturday 12 December 2026."}
+  ],
+
+  weeks: [
+    { n:1, dates:"1-7 Jun", phase:0, vol:"~12 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"2×15 min at T (treadmill)", pace:"%T%", detail:"2×15 min at T pace, 3 min jog between. Sustained threshold work. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"60 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:2, dates:"8-14 Jun", phase:0, vol:"~13 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"3×10 min at T (treadmill)", pace:"%T%", detail:"3×10 min at T pace, 2 min jog. Volume at threshold. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"65 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:3, dates:"15-21 Jun", phase:0, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"25 min continuous T (treadmill)", pace:"%T%", detail:"25 min continuous tempo at T pace. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"70 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:4, dates:"22-28 Jun", phase:0, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + 15 min T (treadmill)", pace:"%T%", detail:"RE-TEST parkrun this week. 15 min tempo at T separately. Target ~23:15. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"50 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 23:15. If 23:30+ slower, hold this phase another 2 weeks." },
+    { n:5, dates:"29 Jun - 5 Jul", phase:0, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×1000m at T (treadmill)", pace:"%T%", detail:"5×1km at T pace, 90s jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"75 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:6, dates:"6-12 Jul", phase:0, vol:"~15 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"3×8 min at T (treadmill)", pace:"%T%", detail:"3×8 min at T pace, 2 min jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"80 min bike Z2 (long)", detail:"Long bike Z2 steady, optionally last 10 min at moderate Z3. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:7, dates:"13-19 Jul", phase:0, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"30 min cont. T + 5×1 hard (treadmill)", pace:"%T%", detail:"30 min tempo at T, then 5×1 min at I pace (90s jog). Bridges to VO2max. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"80 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:8, dates:"20-26 Jul", phase:0, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 4×5 heavy, weighted pull-ups 4×5, push press 3×6, dips 3×8-10, core circuit 10 min. 50 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + 12 min T (treadmill)", pace:"%T%", detail:"RE-TEST parkrun this week. 12 min tempo at T separately. Target ~22:15. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 4×4-5 heavy, Romanian deadlift 4×5, single-leg squat or pistol progression 3×6/leg, calf raises 3×10 weighted, plyos 6×5. 55 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"50 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 22:15. VDOT 44 unlocks if you run under 22:15." },
+    { n:9, dates:"27 Jul - 2 Aug", phase:1, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×1000m at I (treadmill)", pace:"%I%", detail:"5×1km at I pace, jog recovery equal to rep time. First VO2max session. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"75 min bike Z2 (long)", detail:"Easy bike Z2 throughout. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:10, dates:"3-9 Aug", phase:1, vol:"~15 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"6×800m at I (treadmill)", pace:"%I%", detail:"6×800m at I pace, 2:30 jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"80 min bike Z2 (long)", detail:"Easy bike Z2 throughout. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:11, dates:"10-16 Aug", phase:1, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"Billat 30/30 (treadmill)", pace:"%I%", detail:"12-16 reps of 30s at I pace, 30s easy jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2 steady, optionally last 15 min at moderate Z3. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:12, dates:"17-23 Aug", phase:1, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + Billat (treadmill)", pace:"%I%", detail:"RE-TEST parkrun this week. 10 reps of 30/30 separately. Target ~21:30. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"55 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 21:30. VDOT 44 confirms. VDOT 47 unlocks at sub-21:00." },
+    { n:13, dates:"24-30 Aug", phase:1, vol:"~15 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×1km at I + 5min T (treadmill)", pace:"%I%", detail:"5×1km at I pace then 5 min at T pace. Mixed VO2/threshold. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:14, dates:"31 Aug - 6 Sep", phase:1, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"3×1mile at T-I (treadmill)", pace:"%T%", detail:"3×1 mile at threshold-to-interval pace, 2:30 jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Easy bike Z2 throughout. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:15, dates:"7-13 Sep", phase:1, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"6×800m at I (treadmill)", pace:"%I%", detail:"6×800m at I pace, 2:30 jog. Last big VO2 session. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"90 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:16, dates:"14-20 Sep", phase:1, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + 8 min I (treadmill)", pace:"%I%", detail:"RE-TEST parkrun this week. 8 min at I pace separately. Target ~21:00. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"55 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 21:00. VDOT 47 unlocks at sub-21:00. Sub-20 is on track if you hit this." },
+    { n:17, dates:"21-27 Sep", phase:2, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×1km at goal pace (treadmill)", pace:"%G%", detail:"5×1km at 4:00/km goal pace, 60-90s jog. Race-specificity intro. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:18, dates:"28 Sep - 4 Oct", phase:2, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"6×1km at goal pace (treadmill)", pace:"%G%", detail:"6×1km at goal pace, 75s jog. The session that says sub-20 is on. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:19, dates:"5-11 Oct", phase:2, vol:"~15 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"3×1mile at T-G (treadmill)", pace:"%T%", detail:"3×1 mile at threshold-to-goal pace, 2 min jog. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"90 min bike Z2 (long)", detail:"Long bike Z2 steady, optionally last 15 min at moderate Z3. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:20, dates:"12-18 Oct", phase:2, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + 4×400 G (treadmill)", pace:"%G%", detail:"RE-TEST parkrun. 4×400m at goal pace separately. Target ~20:30. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"55 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 20:30. Race-pace work is translating if on target." },
+    { n:21, dates:"19-25 Oct", phase:2, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"4×1200m at goal pace (treadmill)", pace:"%G%", detail:"4×1200m at goal pace, 90s jog. Longer reps at race pace. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:22, dates:"26 Oct - 1 Nov", phase:2, vol:"~15 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"3×2km at T-G (treadmill)", pace:"%T%", detail:"3×2km at threshold-to-goal pace, 3 min jog. Sustained specific work. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:23, dates:"2-8 Nov", phase:2, vol:"~16 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×1km at goal pace (treadmill)", pace:"%G%", detail:"5×1km at goal pace, 75s jog. Last big specific session. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"85 min bike Z2 (long)", detail:"Long bike Z2, steady aerobic effort. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ] },
+    { n:24, dates:"9-15 Nov", phase:2, vol:"~10 km", isTrial:true, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"RE-TEST + 5×400 G (treadmill)", pace:"%G%", detail:"RE-TEST parkrun. 5×400m at goal pace separately. Target ~20:12. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"50 min bike Z2 (long)", detail:"Easy bike spin. Save legs for the parkrun re-test. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"RE-TEST WEEK. Target 20:12. The dress rehearsal. Sub-20 is in reach from this point." },
+    { n:25, dates:"16-22 Nov", phase:3, vol:"~14 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"6×1km at goal pace (treadmill)", pace:"%G%", detail:"6×1km at 3:58-4:00/km, 75s jog. Sharp legs, race-pace lock-in. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"70 min bike Z2 (long)", detail:"Long bike shortens, fully easy Z2. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"Sharpening week 1." },
+    { n:26, dates:"23-29 Nov", phase:3, vol:"~12 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 3×3-5 heavy, weighted pull-ups 3×5, push press 3×5, core 8 min. Pull volume back, keep intensity. 40 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"4×1km at goal pace (treadmill)", pace:"%G%", detail:"4×1km at goal pace, 90s jog. Reducing volume, keeping intensity. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Back squat 3×3-5 heavy (keep load, drop volume), Romanian deadlift 3×5, single-leg 3×5/leg, plyos 4×5. 45 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"60 min bike Z2 (long)", detail:"Easy. Final aerobic touch before taper. Easy bike. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"Sharpening week 2. Strength stays heavy this week, drops next." },
+    { n:27, dates:"30 Nov - 6 Dec", phase:3, vol:"~8 km", isTrial:false, sessions:[
+      {d:"Mon", t:"strength", title:"Upper body strength", detail:"Bench 2×5 moderate, pull-ups 2×5, core 5 min. Maintenance only. 25 min.", why:"Push, pull, core. No legs."},
+      {d:"Tue", t:"quality", title:"5×400m at R pace (treadmill)", pace:"%R%", detail:"5×400m at R pace (1:28-1:44/400), full recovery. Sharp legs, no fatigue. On treadmill, 1% incline. Cushioned surface for high-impact reps.", why:"The week's quality session. Highest-yield for 5K fitness.", hr:"Z3-Z5"},
+      {d:"Wed", t:"bike", title:"Bike Z2 + run strides", detail:"5-10 min easy run + 6×20s strides on grass or flat path, then 40-50 min bike Z2.", why:"Aerobic volume off-legs. Strides on foot for running form.", hr:"Z2 (bike)"},
+      {d:"Thu", t:"easy", title:"Easy run outside", pace:"%E%", detail:"30-45 min easy outside on real terrain (grass, trail, park paths preferred). Conversational pace.", why:"Outdoor easy runs provide terrain variation that supports long-term bone health.", hr:"Z2"},
+      {d:"Fri", t:"strength", title:"Lower body strength", detail:"Body-weight squats 2×10, glute bridges 2×10, light plyos 3×5. Maintenance only. 20 min.", why:"Heavy lower body for running economy. Placed Friday to leave Saturday for full recovery."},
+      {d:"Sat", t:"rest", title:"Full rest", detail:"No running, no strength. Recovery day.", why:"Adaptation happens on rest days."},
+      {d:"Sun", t:"bike", title:"45 min bike Z2 (long)", detail:"Short and easy bike. Outdoor ride preferred (real terrain, road feel) but indoor trainer fine.", why:"Bike long-aerobic stimulus. Off-legs, shin-protected. Builds the cardiovascular engine without ground impact.", hr:"Z2 (bike)"}
+    ], note:"Taper week. Volume drops 40 percent. Restlessness and heavy legs in taper are normal." },
+    { n:28, dates:"7-13 Dec", phase:3, vol:"race week", isTrial:false, sessions:[
+      {d:"Mon", t:"easy", title:"20 min easy outside + 4 strides", pace:"%E%", detail:"Pre-race shake outside. Light terrain, legs alive.", why:"Final touch", hr:"Z2"},
+      {d:"Tue", t:"strength", title:"Upper body MAINTENANCE only", detail:"Bench 2×5 moderate, pull-ups 2×5, core 5 min. Maintenance only. 25 min.", why:"Maintenance only. No leg work. Light and quick."},
+      {d:"Wed", t:"bike", title:"Bike 20 min easy Z2", detail:"Very easy spin, flush the legs.", why:"Active recovery", hr:"Z1-Z2 bike"},
+      {d:"Thu", t:"rest", title:"Full rest", detail:"Rest day before race build-up.", why:"Recovery"},
+      {d:"Fri", t:"easy", title:"15 min very easy outside + 2 strides", pace:"%E%", detail:"Last shakeout before race. Outside, very easy.", why:"Tapered legs", hr:"Z1-Z2"},
+      {d:"Sat", t:"race", title:"RACE: Sat 12 Dec 2026 - sub 20 attempt", pace:"%G%", detail:"Flat, cool course. Control first km at 4:02-4:08. The race is won in km 3 and 4.", why:"Sub 20 attempt", hr:"race effort"},
+      {d:"Sun", t:"rest", title:"Rest or 20 min walk", detail:"Celebrate, walk it out, eat well, sleep.", why:"Recovery"}
+    ], note:"RACE WEEK. Race day Saturday 12 December 2026. No heavy lifts this week. Sleep is the priority." }
+  ],
+
+  guidance: [
+    "Start Monday 1 June 2026. Race Saturday 12 December 2026.",
+    "Weekly template: Mon upper, Tue treadmill quality, Wed bike + strides, Thu easy outside, Fri lower, Sat REST, Sun long bike Z2.",
+    "Treadmill is used for the hard run only. Cushioning matters most when peak ground forces are highest. Easy runs outside provide natural gait variability.",
+    "VDOT shifts automatically when a parkrun result earns a new band. Manual override is available.",
+    "Re-test every 4 weeks at weeks 4, 8, 12, 16, 20, 24. Each one has a target visible in the trial banner.",
+    "If a checkpoint comes in 30+ s slower than target, hold the phase another 2 weeks before progressing.",
+    "Sunday long bike is your aerobic engine session - 60-90 minutes Z2, off-legs to protect the shin.",
+    "Easy must be genuinely easy. If you cannot hold a full conversation, you are running it too hard.",
+    "Cadence around 170 to 180 spm is your mechanical insurance for the shin. If under 170, nudge up 5 percent with a metronome.",
+    "Any bone-localised pain stops everything. Cross-train, settle, return only when pain-free on hopping.",
+    "Calcium ~1500 mg/day plus adequate vitamin D. Never run this build in a calorie deficit.",
+    "Saturday rest is non-negotiable. Adaptation happens on rest days."
+  ]
+};
+
+</script>
+<nav class="bottom-nav" id="bottomNav">
+  <button class="nav-tab nav-tab-active" data-tab="today" type="button" aria-label="Today">
+    <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>
+    <span class="nav-label">Today</span>
+  </button>
+  <button class="nav-tab" data-tab="workouts" type="button" aria-label="Workouts">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M6 7v10M2 9v6M22 9v6M18 7v10M2 12h2M22 12h-2M6 12h12"/></svg>
+    <span class="nav-label">Workouts</span>
+  </button>
+  <button class="nav-tab" data-tab="analytics" type="button" aria-label="Analytics">
+    <svg viewBox="0 0 24 24" class="nav-icon"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+    <span class="nav-label">Analytics</span>
+  </button>
+</nav>
+<script>
+const STORAGE_KEY = 'sub20_ken_tracker_v1';
+const VIEW_KEY = 'sub20_ken_view';
+
+// View state: 'today' | 'week' | 'all'
+let viewMode = 'today';
+try {
+  const saved = localStorage.getItem(VIEW_KEY);
+  if(saved === 'today' || saved === 'week' || saved === 'all') viewMode = saved;
+} catch(e){}
+
+// Plan start date - derived from week 1's "dates" field if present; fallback hardcoded
+const PLAN_START_DATE = new Date(2026, 5, 1); // Mon 1 June 2026 (month is 0-indexed)
+
+// Compute the current plan week + day index based on today
+function getTodayPosition(){
+  const now = new Date();
+  // Strip time so the math is clean
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const start = new Date(PLAN_START_DATE.getFullYear(), PLAN_START_DATE.getMonth(), PLAN_START_DATE.getDate());
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysSince = Math.floor((today - start) / msPerDay);
+  if(daysSince < 0){
+    return { state: 'before', daysUntil: -daysSince };
+  }
+  const weekNum = Math.floor(daysSince / 7) + 1;
+  const dayIdx = daysSince % 7; // 0=Mon, 1=Tue, ..., 6=Sun
+  const maxWeek = Math.max.apply(null, PLAN.weeks.map(w => w.n));
+  if(weekNum > maxWeek){
+    return { state: 'after' };
+  }
+  return { state: 'active', weekNum: weekNum, dayIdx: dayIdx };
+}
+
+function applyViewMode(){
+  document.body.setAttribute('data-view', viewMode);
+  // Update active state and labels on buttons
+  const vw = document.getElementById('viewWeekBtn');
+  const va = document.getElementById('viewAllBtn');
+  if(vw){
+    vw.classList.toggle('active', viewMode === 'week');
+    vw.textContent = (viewMode === 'week') ? 'Hide this week' : 'View this week';
+  }
+  if(va){
+    va.classList.toggle('active', viewMode === 'all');
+    va.textContent = (viewMode === 'all') ? 'Hide full plan' : 'View full plan';
+  }
+  // Tag the current week so the "week" view filter can find it
+  const pos = getTodayPosition();
+  document.querySelectorAll('.week.current-week').forEach(w => w.classList.remove('current-week'));
+  document.querySelectorAll('.phase-label.current-week-phase, .phase-note.current-week-phase').forEach(p => p.classList.remove('current-week-phase'));
+  if(pos.state === 'active'){
+    const weeks = document.querySelectorAll('.week');
+    weeks.forEach((wEl, idx) => {
+      const wk = PLAN.weeks[idx];
+      if(wk && wk.n === pos.weekNum){
+        wEl.classList.add('current-week');
+        wEl.setAttribute('open', '');
+        // Also mark the phase header that comes immediately before it
+        let prev = wEl.previousElementSibling;
+        while(prev && !prev.classList.contains('phase-label')){
+          prev = prev.previousElementSibling;
+        }
+        if(prev) prev.classList.add('current-week-phase');
+        let prevNote = prev ? prev.nextElementSibling : null;
+        if(prevNote && prevNote.classList.contains('phase-note')) prevNote.classList.add('current-week-phase');
+      }
+    });
+  }
+}
+
+function setViewMode(mode){
+  viewMode = mode;
+  try { localStorage.setItem(VIEW_KEY, mode); } catch(e){}
+  applyViewMode();
+  // Scroll to top when switching modes so the user sees the new context
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Render the today card based on current plan position
+const SESSION_ICONS = {
+  strength: '<svg viewBox="0 0 24 24"><path d="M6 7v10M2 9v6M22 9v6M18 7v10M2 12h2M22 12h-2M6 12h12"/></svg>',
+  quality: '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
+  bike: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-3 11.5L8.5 10l3.5-1L9 6"/><circle cx="12" cy="6" r="1"/></svg>',
+  easy: '<svg viewBox="0 0 24 24"><path d="M13 4v6l4 2M3 12a9 9 0 1 1 18 0 9 9 0 0 1-18 0"/></svg>',
+  long: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>',
+  rest: '<svg viewBox="0 0 24 24"><path d="M21 13a9 9 0 1 1-10-10 7 7 0 0 0 10 10z"/></svg>',
+  race: '<svg viewBox="0 0 24 24"><path d="M5 21V3l14 9-14 9z"/></svg>'
+};
+
+function sessionIcon(type){
+  return SESSION_ICONS[type] || SESSION_ICONS.easy;
+}
+
+function computeStreak(){
+  const pos = getTodayPosition();
+  if(pos.state !== 'active') return 0;
+  let streak = 0;
+  let wk = pos.weekNum, day = pos.dayIdx;
+  while(wk >= 1){
+    const id = sid(wk, day);
+    if(progress.done[id]) streak++;
+    else break;
+    day--;
+    if(day < 0){ wk--; day = 6; }
+  }
+  return streak;
+}
+
+function renderTodayHero(){
+  const card = document.getElementById('todayHero');
+  if(!card) return;
+  const pos = getTodayPosition();
+
+  if(pos.state === 'before'){
+    card.classList.remove('done');
+    card.innerHTML = `
+      <div class="today-hero-row">
+        <span class="today-hero-kicker">Plan starts soon</span>
+      </div>
+      <div class="today-hero-main">
+        <div class="today-hero-icon">${SESSION_ICONS.rest}</div>
+        <div class="today-hero-meta">
+          <div class="today-hero-day">${pos.daysUntil} day${pos.daysUntil===1?'':'s'} until week 1</div>
+          <div class="today-hero-title">Plan begins Monday 1 June 2026</div>
+        </div>
+      </div>
+      <div class="today-hero-detail">Bank good sleep and lock in your weekly schedule. Plan kicks off Monday.</div>`;
+    return;
+  }
+  if(pos.state === 'after'){
+    card.classList.remove('done');
+    const raceTime = progress.raceTime;
+    card.innerHTML = `
+      <div class="today-hero-row">
+        <span class="today-hero-kicker">Plan complete</span>
+      </div>
+      <div class="today-hero-main">
+        <div class="today-hero-icon">${SESSION_ICONS.race}</div>
+        <div class="today-hero-meta">
+          <div class="today-hero-day">Race day has passed</div>
+          <div class="today-hero-title">${raceTime ? 'Race time: ' + esc(raceTime) : 'Log your race time'}</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const wk = PLAN.weeks.find(w => w.n === pos.weekNum);
+  if(!wk){ card.innerHTML = ''; return; }
+  const session = wk.sessions[pos.dayIdx];
+  if(!session){ card.innerHTML = ''; return; }
+
+  const id = sid(wk.n, pos.dayIdx);
+  const isDone = !!progress.done[id];
+  const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const dayName = dayNames[pos.dayIdx];
+  const pace = session.pace ? resolvePace(session.pace) : '';
+  const isTreadmill = /treadmill/i.test(session.title || '');
+  const tmKmh = (isTreadmill && pace) ? paceToTreadmillKmh(pace) : '';
+
+  card.classList.toggle('done', isDone);
+
+  const chips = [];
+  chips.push(`<span class="tag ${session.t||''}">${esc(session.t||'')}</span>`);
+  if(pace) chips.push(`<span class="pacechip">${esc(pace)}</span>`);
+  if(tmKmh) chips.push(`<span class="tmchip">${esc(tmKmh)} @ 1%</span>`);
+  if(session.hr) chips.push(`<span class="hrchip">${esc(session.hr)}</span>`);
+
+  card.innerHTML = `
+    <div class="today-hero-row">
+      <span class="today-hero-kicker">Today · Week ${wk.n}</span>
+      <span class="today-hero-date">${esc(wk.dates || '')}</span>
+    </div>
+    <div class="today-hero-main">
+      <div class="today-hero-icon">${sessionIcon(session.t)}</div>
+      <div class="today-hero-meta">
+        <div class="today-hero-day">${dayName}</div>
+        <div class="today-hero-title">${esc(session.title || '')}</div>
+      </div>
+    </div>
+    <div class="today-hero-chips">${chips.join('')}</div>
+    <div class="today-hero-detail">${esc(session.detail || '')}</div>
+    <div class="today-hero-actions">
+      <button type="button" class="today-hero-check" id="todayCheckBtn" aria-label="Mark today done">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </button>
+      <span class="today-hero-status">${isDone ? '✓ Done' : 'Tap to mark complete'}</span>
+    </div>`;
+
+  const btn = document.getElementById('todayCheckBtn');
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      const real = document.querySelector('.check[data-id="' + id + '"]');
+      if(real) real.click();
+      else {
+        progress.done[id] = !progress.done[id];
+        saveProgress();
+        renderTodayHero();
+        updateDash();
+      }
+    });
+  }
+}
+
+function renderWeekProgress(){
+  const bar = document.getElementById('weekProgressBar');
+  if(!bar) return;
+  const pos = getTodayPosition();
+  if(pos.state !== 'active'){ bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const wk = PLAN.weeks.find(w => w.n === pos.weekNum);
+  if(!wk){ bar.style.display = 'none'; return; }
+  const done = wk.sessions.filter((s, i) => progress.done[sid(wk.n, i)]).length;
+  const total = wk.sessions.length;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  const streak = computeStreak();
+  bar.innerHTML = `
+    <span class="week-progress-label">Week ${wk.n}</span>
+    <div class="week-progress-bar"><div class="week-progress-fill" style="width:${pct}%"></div></div>
+    <span class="week-progress-text">${done}/${total}</span>
+    ${streak > 0 ? `<span class="week-progress-text" style="color:var(--amber)">🔥 ${streak}</span>` : ''}`;
+}
+
+function renderStatGrid(){
+  const grid = document.getElementById('statGrid');
+  if(!grid) return;
+  const totalSessions = PLAN.weeks.reduce((sum, w) => sum + w.sessions.length, 0);
+  const doneSessions = Object.values(progress.done).filter(Boolean).length;
+  const pct = totalSessions > 0 ? Math.round(doneSessions / totalSessions * 100) : 0;
+  let bestSec = null, bestStr = '--';
+  Object.values(progress.trials || {}).forEach(t => {
+    const s = parseT(t);
+    if(s !== null && (bestSec === null || s < bestSec)){ bestSec = s; bestStr = t; }
+  });
+  const checkpoints = PLAN.checkpoints || [];
+  const upcoming = checkpoints.filter(cp => !(progress.trials && progress.trials[cp.week]));
+  let nextCpStr = '✓', nextCpLbl = 'all done';
+  if(upcoming.length > 0){
+    nextCpStr = upcoming[0].targetLabel;
+    nextCpLbl = `week ${upcoming[0].week}`;
+  }
+  const vdot = PLAN.currentVdot || 41;
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="stat-card-value green" id="doneCount">${doneSessions}</div>
+      <div class="stat-card-label">of <span id="totalCount">${totalSessions}</span> done · ${pct}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="stat-card-value green">${esc(bestStr)}</div>
+      <div class="stat-card-label">current 5K PB</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+      <div class="stat-card-value">${vdot}</div>
+      <div class="stat-card-label">current VDOT</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+      <div class="stat-card-value amber">${esc(nextCpStr)}</div>
+      <div class="stat-card-label">${esc(nextCpLbl)}</div>
+    </div>`;
+}
+
+
+
+
+const EDITS_KEY = 'sub20_ken_plan_edits_v1';
+let editMode = false;
+
+function loadEdits(){
+  try{ var r = localStorage.getItem(EDITS_KEY); var e = r? JSON.parse(r):{}; return (e&&typeof e==='object')? e : {}; }
+  catch(e){ return {}; }
+}
+function saveEdits(){ try{ localStorage.setItem(EDITS_KEY, JSON.stringify(planEdits)); }catch(e){} }
+let planEdits = loadEdits();
+
+// Apply saved edits over the base PLAN (non-destructive overlay)
+function applyEdits(){
+  // meta
+  if(planEdits.meta){
+    if(planEdits.meta.title!==undefined) PLAN.title = planEdits.meta.title;
+    if(planEdits.meta.subtitle!==undefined) PLAN.subtitle = planEdits.meta.subtitle;
+  }
+  // sessions
+  PLAN.weeks.forEach(wk=>{
+    wk.sessions.forEach((s,i)=>{
+      const e = planEdits['w'+wk.n+'s'+i];
+      if(e){
+        if(e.title!==undefined) s.title = e.title;
+        if(e.pace!==undefined) s.pace = e.pace;
+        if(e.detail!==undefined) s.detail = e.detail;
+        if(e.why!==undefined) s.why = e.why;
+        if(e.d!==undefined) s.d = e.d;
+        if(e.hr!==undefined) s.hr = e.hr;
+      }
+    });
+  });
+  // phases
+  PLAN.phases.forEach((ph,i)=>{
+    const e = planEdits['phase'+i];
+    if(e){ if(e.name!==undefined) ph.name = e.name; if(e.note!==undefined) ph.note = e.note; }
+  });
+  // texts (disclaimer, hint, footer)
+  if(PLAN.texts){
+    ['disclaimer','backupHint','footer1','footer2','footerCredit','emmaName','emmaSub','emmaInitial'].forEach(k=>{
+      const e = planEdits['text_'+k];
+      if(e && e.text!==undefined) PLAN.texts[k] = e.text;
+    });
+  }
+  // guidance
+  if(PLAN.guidance) PLAN.guidance.forEach((g,i)=>{
+    const e = planEdits['guid'+i];
+    if(e && e.text!==undefined) PLAN.guidance[i] = e.text;
+  });
+}
+let progress = loadProgress();
+
+function loadProgress(){
+  var p;
+  try{ var r = localStorage.getItem(STORAGE_KEY); p = r ? JSON.parse(r) : {}; }
+  catch(e){ p = {}; }
+  if(!p || typeof p !== 'object') p = {};
+  if(!p.done || typeof p.done !== 'object') p.done = {};
+  if(!p.trials || typeof p.trials !== 'object') p.trials = {};
+  if(!p.notes || typeof p.notes !== 'object') p.notes = {};
+  if(typeof p.raceTime !== 'string') p.raceTime = '';
+  if(!p.actuals || typeof p.actuals !== 'object') p.actuals = {};
+  if(!p.strength || typeof p.strength !== 'object') p.strength = {};
+  return p;
+}
+function saveProgress(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }catch(e){}
+}
+
+function sid(w,i){ return 'w'+w+'s'+i; }
+
+// Compute the highest VDOT earned from all logged trial times.
+// Returns {newVdot, changed:boolean, newlyUnlockedLabel}.
+function computeEarnedVdot(){
+  const unlocks = PLAN.vdotUnlocks || [];
+  if(!unlocks.length) return { newVdot: PLAN.currentVdot, changed: false };
+  // Find the fastest valid time across all trials
+  let bestSec = null;
+  Object.values(progress.trials || {}).forEach(t => {
+    const sec = parseT(t);
+    if(sec !== null && (bestSec === null || sec < bestSec)) bestSec = sec;
+  });
+  if(bestSec === null) return { newVdot: PLAN.currentVdot, changed: false };
+  // Walk unlocks from highest VDOT down. Take the first (best) one whose threshold the time beats.
+  const sorted = unlocks.slice().sort((a,b) => b.vdot - a.vdot);
+  let earnedVdot = 41, earnedLabel = '';
+  for(const u of sorted){
+    if(bestSec < u.sec){ earnedVdot = u.vdot; earnedLabel = u.label; break; }
+  }
+  // Only shift UP - never drop a hard-earned band
+  const prev = PLAN.currentVdot || 41;
+  const next = Math.max(prev, earnedVdot);
+  return {
+    newVdot: next,
+    changed: next > prev,
+    newlyUnlockedLabel: next > prev ? earnedLabel : ''
+  };
+}
+
+// Briefly display a toast when VDOT auto-shifts.
+function showVdotToast(message){
+  const existing = document.getElementById('vdotToast');
+  if(existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.id = 'vdotToast';
+  toast.className = 'vdot-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(()=>{ if(toast.parentNode) toast.classList.add('show'); }, 10);
+  setTimeout(()=>{
+    if(!toast.parentNode) return;
+    toast.classList.remove('show');
+    setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+  }, 5000);
+}
+// Parse a strength prescription string into an array of {name, target} exercises.
+// Splits on comma, then tries to separate the exercise name from its set×rep target.
+function parseStrength(str){
+  if(!str) return [];
+  // Strip trailing duration like ". 50 min." or summary lines after the last set spec
+  const cleaned = String(str).replace(/\.\s*\d+(\-\d+)?\s*min\.?\s*$/i,'');
+  return cleaned.split(/,(?![^()]*\))/).map(function(part){
+    const p = part.trim();
+    if(!p) return null;
+    // Find first occurrence of a set×rep pattern (e.g. 4×5, 3×8-10, 6×5)
+    const m = p.match(/(\d+\s*[×x]\s*[\d\-]+(?:\s*\/\s*\w+)?)/);
+    if(m){
+      const target = p.slice(m.index).trim();
+      const name = p.slice(0, m.index).trim().replace(/\s+$/,'');
+      return { name: name || p, target: target };
+    }
+    // No set×rep found (e.g. "core circuit 10 min"). Keep as a single-line exercise.
+    return { name: p, target: '' };
+  }).filter(function(x){ return x && x.name; });
+}
+// Convert a pace string ("5:00/km" or "5:53-6:27/km") to treadmill km/h ("12.0 km/h" or "9.3-10.2 km/h").
+// Returns empty string if the pace is not convertible (e.g. R-pace lap times).
+function paceToTreadmillKmh(paceStr){
+  if(!paceStr) return '';
+  // Match either "M:SS-M:SS/km" or "M:SS/km"
+  const rangeM = paceStr.match(/^(\d+):(\d{2})\s*[-\u2013]\s*(\d+):(\d{2})\/km/);
+  if(rangeM){
+    const fast = parseInt(rangeM[1])*60 + parseInt(rangeM[2]);
+    const slow = parseInt(rangeM[3])*60 + parseInt(rangeM[4]);
+    const fastKmh = (3600/slow).toFixed(1);  // slower pace -> slower km/h (lower number)
+    const slowKmh = (3600/fast).toFixed(1);  // faster pace -> higher km/h
+    return fastKmh + '-' + slowKmh + ' km/h';
+  }
+  const singleM = paceStr.match(/^(\d+):(\d{2})\/km/);
+  if(singleM){
+    const sec = parseInt(singleM[1])*60 + parseInt(singleM[2]);
+    return (3600/sec).toFixed(1) + ' km/h';
+  }
+  return '';
+}
+
+function resolvePace(str){
+  if(!str) return str;
+  const v = PLAN.currentVdot || 41;
+  const p = PLAN.vdotPaces[v] || PLAN.vdotPaces[41];
+  return String(str)
+    .replace(/%E%/g, p.easy)
+    .replace(/%T%/g, p.threshold)
+    .replace(/%I%/g, p.interval)
+    .replace(/%R%/g, p.repetition)
+    .replace(/%G%/g, p.goal)
+    .replace(/%M%/g, p.marathon);
+}
+// HTML-escape any user-controlled text before inserting into the DOM (XSS safety)
+function esc(str){
+  return String(str==null?'':str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function typeIcon(t){
+  // inline SVG glyphs per session type
+  const ic = {
+    quality: '<svg viewBox="0 0 24 24" class="ticon"><polyline points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"></polyline></svg>',
+    easy:    '<svg viewBox="0 0 24 24" class="ticon"><path d="M3 12c3-4 6-4 9 0s6 4 9 0"></path></svg>',
+    long:    '<svg viewBox="0 0 24 24" class="ticon"><path d="M2 12h4l3-7 4 14 3-7h6"></path></svg>',
+    trial:   '<svg viewBox="0 0 24 24" class="ticon"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>',
+    race:    '<svg viewBox="0 0 24 24" class="ticon"><path d="M5 3v18M5 4h11l-2 4 2 4H5"></path></svg>',
+    strength:'<svg viewBox="0 0 24 24" class="ticon"><path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"></path></svg>',
+    rest:    '<svg viewBox="0 0 24 24" class="ticon"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>',
+    bike:    '<svg viewBox="0 0 24 24" class="ticon"><circle cx="5" cy="17" r="3"></circle><circle cx="19" cy="17" r="3"></circle><path d="M5 17l4-9h6l3 9M9 8h3"></path></svg>'
+  };
+  return ic[t] || '';
+}
+
+function render(){
+  applyEdits();
+  if(editMode){
+    document.getElementById('title').innerHTML = '<input class="edit-field" data-key="meta" data-field="title" value="'+esc(PLAN.title)+'">';
+    document.getElementById('subtitle').innerHTML = '<input class="edit-field" data-key="meta" data-field="subtitle" value="'+esc(PLAN.subtitle)+'">';
+  } else {
+    document.getElementById('title').textContent = PLAN.title;
+    document.getElementById('subtitle').textContent = PLAN.subtitle;
+  }
+
+
+
+  // weeks grouped by phase
+  const weeksEl = document.getElementById('weeks');
+  let html = '';
+  let lastPhase = -1;
+  for(const wk of PLAN.weeks){
+    if(wk.phase !== lastPhase){
+      const ph = PLAN.phases[wk.phase];
+      if(editMode){
+        html += `<div class="phase-label"><input class="edit-field" data-key="phase${wk.phase}" data-field="name" value="${esc(ph.name)}"></div>
+          <div class="phase-note"><input class="edit-field" data-key="phase${wk.phase}" data-field="note" value="${esc(ph.note)}"></div>`;
+      } else {
+        html += `<div class="phase-label">${esc(ph.name)} · wk ${esc(ph.weeks)}</div><div class="phase-note">${esc(ph.note)}</div>`;
+      }
+      lastPhase = wk.phase;
+    }
+    const doneInWeek = wk.sessions.filter((s,i)=>progress.done[sid(wk.n,i)]).length;
+    const weekComplete = doneInWeek===wk.sessions.length;
+    html += `<details class="week${wk.isTrial?' trial':''}${weekComplete?' complete':''}" data-week-n="${wk.n}">
+      <summary class="week-head"><span class="wn">Week ${wk.n}${wk.dates?' <span class="wdates">· '+esc(wk.dates)+'</span>':''}${doneInWeek===wk.sessions.length?' <span class="week-done-badge">complete</span>':''}</span><span class="wc">${doneInWeek}/${wk.sessions.length} done</span><span class="week-chev" aria-hidden="true">▾</span></summary>`;
+    // week-level trial banner: shows for re-test weeks (not tied to a specific session type)
+    if(wk.isTrial && !editMode){
+      const firstTrialWk = Math.min.apply(null, PLAN.weeks.filter(x=>x.isTrial).map(x=>x.n));
+      const trialLabel = (wk.n===firstTrialWk) ? 'Enter your latest 5K time (mm:ss)' : 'Log your 5K re-test time (mm:ss)';
+      const cp = (PLAN.checkpoints || []).find(c => String(c.week) === String(wk.n));
+      const targetHTML = cp ? `<div class="checkpoint-target">Target this checkpoint: <strong>${esc(cp.targetLabel)}</strong></div>` : '';
+      html += `<div class="trial-inline">
+        <label>${trialLabel}</label>
+        ${targetHTML}
+        <input type="text" class="trialInput" data-week="${wk.n}" value="${esc(progress.trials[wk.n])}" placeholder="${cp?esc(cp.targetLabel):'22:30'}" inputmode="text">
+        <div class="trialVerdict" data-week="${wk.n}"></div>
+      </div>`;
+    }
+    wk.sessions.forEach((s,i)=>{
+      const id = sid(wk.n,i);
+      const done = !!progress.done[id];
+      html += `<div class="session">
+        <div class="check${done?' done':''}" data-id="${id}" role="checkbox" aria-checked="${done}" tabindex="0">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div class="s-body">
+          <div class="s-day">${editMode?`<input class="edit-field" data-key="${id}" data-field="d" value="${esc(s.d)}" style="display:inline-block;width:auto;min-width:90px">`:esc(s.d)}<span class="tag ${s.t}">${typeIcon(s.t)}${s.t}</span>${(!editMode&&s.pace)?`<span class="pacechip">${esc(resolvePace(s.pace))}</span>${(s.title && /treadmill/i.test(s.title) && paceToTreadmillKmh(resolvePace(s.pace)))?`<span class="tmchip">${esc(paceToTreadmillKmh(resolvePace(s.pace)))} @ 1%</span>`:''}`:''}${(!editMode&&s.hr)?`<span class="hrchip">${esc(s.hr)}</span>`:''}</div>
+          ${editMode
+            ? `<input class="edit-field" data-key="${id}" data-field="title" value="${esc(s.title)}" placeholder="Session">
+               <input class="edit-field pace" data-key="${id}" data-field="pace" value="${esc(resolvePace(s.pace))}" placeholder="Pace">
+               <input class="edit-field" data-key="${id}" data-field="detail" value="${esc(s.detail)}" placeholder="Detail (optional)">
+               <input class="edit-field" data-key="${id}" data-field="hr" value="${esc(s.hr)}" placeholder="HR zone">`
+            : `<div class="s-title${done?' done':''}">${esc(s.title)}</div>
+               ${s.detail?`<div class="s-detail">${esc(s.detail)}</div>`:''}`}
+          ${editMode?`<input class="edit-field" data-key="${id}" data-field="why" value="${esc(s.why)}" placeholder="Why">`:`<div class="s-why">${esc(s.why)}</div>`}
+          ${!editMode?`<input type="text" class="note-input" data-id="${id}" value="${esc(progress.notes[id])}" placeholder="Add a note (how did it feel?)">`:''}
+          ${(!editMode && s.t!=='trial' && s.t!=='race' && s.t!=='strength' && s.t!=='rest' && s.t!=='bike')?`
+          <div class="actual-row">
+            <input type="text" class="actual-pace" data-id="${id}" value="${esc((progress.actuals[id]||{}).pace)}" placeholder="Actual pace" inputmode="text">
+            <input type="text" class="actual-rpe" data-id="${id}" value="${esc((progress.actuals[id]||{}).rpe)}" placeholder="RPE 1-10" inputmode="numeric">
+          </div>
+          <div class="actual-compare" data-id="${id}"></div>`:''}
+          ${(!editMode && s.t==='bike')?`
+          <div class="actual-row">
+            <input type="text" class="actual-rpe" data-id="${id}" value="${esc((progress.actuals[id]||{}).rpe)}" placeholder="RPE 1-10" inputmode="numeric" style="flex:1">
+          </div>`:''}
+          ${(!editMode && s.t==='strength')?renderStrengthLog(id, s):''}
+          ${(!editMode && s.t==='trial')?`
+          <div class="trial-inline">
+            <label>${wk.n===Math.min.apply(null,PLAN.weeks.filter(x=>x.isTrial).map(x=>x.n)) ? 'Enter your current 5K PB (mm:ss)' : 'Log your 5 km time trial (mm:ss)'}</label>
+            <input type="text" class="trialInput" data-week="${wk.n}" value="${esc(progress.trials[wk.n])}" placeholder="24:30" inputmode="text">
+            <div class="trialVerdict" data-week="${wk.n}"></div>
+          </div>`:''}
+          ${(!editMode && s.t==='race')?`
+          <div class="trial-inline race">
+            <label>Log your race time (mm:ss)</label>
+            <input type="text" id="raceBoxInput" value="${esc(progress.raceTime)}" placeholder="19:59" inputmode="text">
+            <div class="trialVerdict" id="raceBoxVerdict"></div>
+          </div>`:''}
+        </div>
+      </div>`;
+    });
+    html += `</details>`;
+  }
+  // Preserve which weeks are open so a re-render (e.g. ticking a session) does not collapse them.
+  const openWeekNs = new Set();
+  weeksEl.querySelectorAll('details.week[open]').forEach(el => {
+    const n = el.getAttribute('data-week-n');
+    if(n) openWeekNs.add(n);
+  });
+  weeksEl.innerHTML = html;
+  openWeekNs.forEach(n => {
+    const el = weeksEl.querySelector('details.week[data-week-n="'+n+'"]');
+    if(el) el.setAttribute('open', '');
+  });
+
+  // guidance section
+  var gb = document.getElementById('guidanceBody');
+  // render editable texts (disclaimer, hint, footer)
+  if(PLAN.texts){
+    const t = PLAN.texts;
+    const disc = document.getElementById('disclaimer');
+    const hint = document.getElementById('ioHint');
+    const foot = document.getElementById('footer');
+    if(editMode){
+      if(disc) disc.innerHTML = '<textarea class="edit-field text-area" data-key="text_disclaimer" data-field="text" rows="4">'+esc(t.disclaimer)+'</textarea>';
+      if(hint) hint.innerHTML = '<input class="edit-field" data-key="text_backupHint" data-field="text" value="'+esc(t.backupHint)+'">';
+      if(foot) foot.innerHTML = '<input class="edit-field" data-key="text_footer1" data-field="text" value="'+esc(t.footer1)+'">'
+        +'<input class="edit-field" data-key="text_footer2" data-field="text" value="'+esc(t.footer2)+'">'
+        +'<input class="edit-field" data-key="text_footerCredit" data-field="text" value="'+esc(t.footerCredit)+'">';
+    } else {
+      if(disc) disc.textContent = t.disclaimer;
+      if(hint) hint.textContent = t.backupHint;
+      if(foot) foot.innerHTML = esc(t.footer1)+'<br>'+esc(t.footer2)+'<br><span class="footer-credit">'+esc(t.footerCredit)+'</span>';
+    }
+    const emI = document.getElementById('emmaInitial');
+    const emM = document.getElementById('emmaMeta');
+    if(emI){ var nm=(t.emmaName||'').trim(); emI.textContent = nm? nm.charAt(0).toUpperCase() : 'E'; }
+    if(emM){
+      if(editMode){
+        emM.innerHTML = '<input class="edit-field" data-key="text_emmaName" data-field="text" value="'+esc(t.emmaName)+'" style="font-size:0.95rem">'+'<input class="edit-field" data-key="text_emmaSub" data-field="text" value="'+esc(t.emmaSub)+'" style="font-size:0.8rem">';
+      } else {
+        emM.innerHTML = '<span class="emma-hi">'+esc(t.emmaName)+'</span><span class="emma-sub">'+esc(t.emmaSub)+'</span>';
+      }
+    }
+  }
+
+  if(gb && PLAN.guidance){
+    if(editMode){
+      gb.innerHTML = PLAN.guidance.map(function(g,i){return '<input class="edit-field" data-key="guid'+i+'" data-field="text" value="'+esc(g)+'">';}).join('');
+    } else {
+      gb.innerHTML = PLAN.guidance.map(function(g){return '<p class="note">'+esc(g)+'</p>';}).join('');
+    }
+  }
+
+  // wire checkboxes
+  document.querySelectorAll('.check').forEach(el=>{
+    const toggle = ()=>{
+      const id = el.dataset.id;
+      progress.done[id] = !progress.done[id];
+      if(!progress.done[id]) delete progress.done[id];
+      saveProgress(); render();
+    };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle();} });
+  });
+
+  // VDOT selector: auto-shifts when a parkrun earns a new band, but manual override is allowed
+  const vsel = document.getElementById('vdotSelect');
+  if(vsel){
+    vsel.value = String(PLAN.currentVdot || 41);
+    vsel.disabled = false;
+    vsel.title = 'Auto-updates when a parkrun unlocks a new band. You can override manually if needed.';
+    vsel.addEventListener('change', ()=>{
+      PLAN.currentVdot = parseInt(vsel.value, 10);
+      try{ localStorage.setItem('sub20_ken_vdot', String(PLAN.currentVdot)); }catch(e){}
+      render();
+    });
+  }
+
+  // wire trial inputs (one per trial week)
+  document.querySelectorAll('.trialInput').forEach(ti=>{
+    const wk = ti.dataset.week;
+    ti.addEventListener('input', ()=>{
+      progress.trials[wk] = ti.value.trim();
+      saveProgress();
+      // Auto-VDOT check: if this trial time unlocks a new band, shift up and re-render
+      const earned = computeEarnedVdot();
+      if(earned.changed){
+        PLAN.currentVdot = earned.newVdot;
+        try{ localStorage.setItem('sub20_ken_vdot', String(PLAN.currentVdot)); }catch(e){}
+        showVdotToast('🎯 ' + earned.newlyUnlockedLabel + ' - paces updated');
+        render();
+        return;
+      }
+      renderVerdict(wk);
+      updateDash();
+    });
+    renderVerdict(wk);
+  });
+
+  // wire note inputs (client logs how a session felt)
+  document.querySelectorAll('.note-input').forEach(ni=>{
+    ni.addEventListener('input', ()=>{
+      const id = ni.dataset.id;
+      if(ni.value.trim()) progress.notes[id] = ni.value;
+      else delete progress.notes[id];
+      saveProgress();
+    });
+  });
+
+  // wire strength log: name/target/load/reps/rpe inputs, remove and add buttons
+  // Use event delegation so dynamically-added rows also work
+  function syncStrengthFromDOM(sessionId){
+    const rows = document.querySelectorAll('.strength-row[data-sid="'+sessionId+'"]');
+    const arr = [];
+    rows.forEach(function(row){
+      arr.push({
+        name:   row.querySelector('.strength-name-input').value.trim(),
+        target: row.querySelector('.strength-target-input').value.trim(),
+        load:   row.querySelector('.strength-load').value.trim(),
+        reps:   row.querySelector('.strength-reps').value.trim(),
+        rpe:    row.querySelector('.strength-rpe').value.trim()
+      });
+    });
+    if(arr.length===0) delete progress.strength[sessionId];
+    else progress.strength[sessionId] = arr;
+    saveProgress();
+  }
+
+  // Pre-seed progress.strength entries from prescription so the log is "owned" by progress immediately.
+  // This way removes work correctly (otherwise prescription would re-add removed rows on next render).
+  document.querySelectorAll('.strength-row').forEach(function(row){
+    const sessionId = row.dataset.sid;
+    if(!progress.strength[sessionId]){
+      // Seed all rows for this session in one go
+      syncStrengthFromDOM(sessionId);
+    }
+  });
+
+  // Wire input changes (any of the 5 inputs per row)
+  document.querySelectorAll('.strength-row').forEach(function(row){
+    const sessionId = row.dataset.sid;
+    row.querySelectorAll('input').forEach(function(inp){
+      inp.addEventListener('input', function(){ syncStrengthFromDOM(sessionId); });
+    });
+  });
+
+  // Wire × remove buttons
+  document.querySelectorAll('.strength-remove').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const sessionId = btn.dataset.sid;
+      const idx = parseInt(btn.dataset.idx, 10);
+      const arr = progress.strength[sessionId] || [];
+      arr.splice(idx, 1);
+      if(arr.length===0) delete progress.strength[sessionId];
+      else progress.strength[sessionId] = arr;
+      saveProgress();
+      render();
+    });
+  });
+
+  // Wire + add buttons
+  document.querySelectorAll('.strength-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const sessionId = btn.dataset.sid;
+      if(!progress.strength[sessionId]) progress.strength[sessionId] = [];
+      progress.strength[sessionId].push({ name:'', target:'', load:'', reps:'', rpe:'' });
+      saveProgress();
+      render();
+      // After render, focus the new row's name input
+      const rows = document.querySelectorAll('.strength-row[data-sid="'+sessionId+'"]');
+      if(rows.length){
+        const last = rows[rows.length-1];
+        const nameInput = last.querySelector('.strength-name-input');
+        if(nameInput) nameInput.focus();
+      }
+    });
+  });
+
+  // wire actual pace + RPE inputs
+  function saveActual(id, field, val){
+    if(!progress.actuals[id]) progress.actuals[id] = {};
+    if(val.trim()) progress.actuals[id][field] = val.trim();
+    else delete progress.actuals[id][field];
+    if(Object.keys(progress.actuals[id]).length===0) delete progress.actuals[id];
+    saveProgress();
+    renderActualCompare(id);
+    renderLogSummary();
+    updateDash();
+  }
+  document.querySelectorAll('.actual-pace').forEach(el=>{
+    el.addEventListener('input', ()=>saveActual(el.dataset.id,'pace',el.value));
+  });
+  document.querySelectorAll('.actual-rpe').forEach(el=>{
+    el.addEventListener('input', ()=>saveActual(el.dataset.id,'rpe',el.value));
+  });
+  // initial compare render for all sessions with actuals
+  document.querySelectorAll('.actual-compare').forEach(el=>renderActualCompare(el.dataset.id));
+
+  // wire race time inputs (both the on-session box and the celebration box share progress.raceTime)
+  function wireRaceInput(elId){
+    const el=document.getElementById(elId);
+    if(el){
+      el.addEventListener('input', ()=>{
+        progress.raceTime=el.value.trim();
+        saveProgress();
+        // keep the other input in sync if present
+        ['raceTimeInput','raceBoxInput'].forEach(other=>{
+          if(other!==elId){ const o=document.getElementById(other); if(o && o.value!==progress.raceTime) o.value=progress.raceTime; }
+        });
+        renderRaceVerdict();
+        renderRaceBoxVerdict();
+        updateDash();
+      });
+    }
+  }
+  wireRaceInput('raceTimeInput');
+  wireRaceInput('raceBoxInput');
+  renderRaceBoxVerdict();
+
+  // wire edit fields
+  document.querySelectorAll('.edit-field').forEach(f=>{
+    f.addEventListener('input', ()=>{
+      const key = f.dataset.key, field = f.dataset.field;
+      if(!planEdits[key]) planEdits[key] = {};
+      planEdits[key][field] = f.value;
+      saveEdits();
+    });
+  });
+
+  renderLogSummary();
+  updateDash();
+}
+
+function parseT(str){ const p=(str||'').split(':').map(Number); if(p.length!==2||p.some(isNaN)) return null; return p[0]*60+p[1]; }
+
+// parse a pace string like "5:18/km" or "5:18" to seconds
+function parsePace(str){
+  if(!str) return null;
+  const m = String(str).match(/(\d+):(\d{1,2})/);
+  if(!m) return null;
+  return parseInt(m[1],10)*60 + parseInt(m[2],10);
+}
+// parse a prescribed pace that may be a window "5:14-5:22" -> {lo,hi}; single -> {lo:hi:same}
+function parsePaceRange(str){
+  if(!str) return null;
+  const times = String(str).match(/\d+:\d{1,2}/g);
+  if(!times || !times.length) return null;
+  const secs = times.map(t=>{ const p=t.split(':'); return +p[0]*60 + +p[1]; });
+  return { lo: Math.min(...secs), hi: Math.max(...secs) };
+}
+// find the prescribed pace for a session id from the rendered PLAN
+function prescribedPace(id){
+  for(const wk of PLAN.weeks){
+    for(let i=0;i<wk.sessions.length;i++){
+      if(sid(wk.n,i)===id) return resolvePace(wk.sessions[i].pace || '');
+    }
+  }
+  return '';
+}
+function renderLogSummary(){
+  const det = document.getElementById('logSummaryDetails');
+  const body = document.getElementById('logSummaryBody');
+  if(!det || !body) return;
+  // gather all logged actuals
+  const ids = Object.keys(progress.actuals||{});
+  const logged = ids.filter(id=>{ const a=progress.actuals[id]; return a && (a.pace||a.rpe); });
+  if(logged.length===0){ det.style.display='none'; return; }
+  det.style.display='block';
+
+  let onTarget=0, faster=0, slower=0, paceLogged=0;
+  let rpeSum=0, rpeCount=0;
+  logged.forEach(id=>{
+    const a=progress.actuals[id];
+    if(a.pace){
+      const range=parsePaceRange(prescribedPace(id)), aSec=parsePace(a.pace);
+      if(range && aSec!==null){
+        paceLogged++;
+        if(aSec>=range.lo && aSec<=range.hi) onTarget++;
+        else if(aSec<range.lo) faster++;
+        else slower++;
+      }
+    }
+    if(a.rpe){ const v=parseFloat(a.rpe); if(!isNaN(v)){ rpeSum+=v; rpeCount++; } }
+  });
+
+  const rows=[];
+  rows.push('<div class="log-stat-row"><span class="lbl">Sessions logged</span><span class="val">'+logged.length+'</span></div>');
+  if(paceLogged>0){
+    rows.push('<div class="log-stat-row"><span class="lbl">On target pace</span><span class="val good">'+onTarget+' of '+paceLogged+'</span></div>');
+    if(faster>0) rows.push('<div class="log-stat-row"><span class="lbl">Faster than prescribed</span><span class="val good">'+faster+'</span></div>');
+    if(slower>0) rows.push('<div class="log-stat-row"><span class="lbl">Slower than prescribed</span><span class="val">'+slower+'</span></div>');
+  }
+  if(rpeCount>0){
+    rows.push('<div class="log-stat-row"><span class="lbl">Average effort (RPE)</span><span class="val">'+(rpeSum/rpeCount).toFixed(1)+' / 10</span></div>');
+  }
+  body.innerHTML = rows.join('');
+}
+
+// Render the strength log: list of {name, target, load, reps, rpe} rows.
+// On first view, seeds from prescription. After that, user controls what is in the log (add/remove).
+function renderStrengthLog(id, session){
+  // Get or initialise the log for this session
+  let logged = (progress.strength && progress.strength[id]) || null;
+  if(!logged){
+    // First view: seed from prescription
+    const presc = parseStrength(session.detail || '');
+    logged = presc.map(function(ex){
+      return { name: ex.name, target: ex.target, load: '', reps: '', rpe: '' };
+    });
+  } else {
+    // Migrate old format if needed (rows without a name field)
+    if(logged.length > 0 && logged[0] && typeof logged[0].name === 'undefined'){
+      const presc = parseStrength(session.detail || '');
+      logged = logged.map(function(entry, i){
+        const ex = presc[i] || { name: '', target: '' };
+        return { name: ex.name, target: ex.target, load: entry.load||'', reps: entry.reps||'', rpe: entry.rpe||'' };
+      });
+    }
+  }
+
+  // Find the most recent log for each exercise name (for the "last time" hint)
+  const lastByName = lookupLastStrengthByName(id);
+
+  let rows = logged.map(function(ex, i){
+    const lastKey = (ex.name || '').toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+    const last = lastByName[lastKey];
+    const lastHint = last ? `last: ${esc(last.load)} kg · ${esc(last.reps)} reps · RPE ${esc(last.rpe)}` : '';
+    const spark = drawStrengthSparkline(ex.name, id);
+    return `
+      <div class="strength-row" data-sid="${id}" data-idx="${i}">
+        <div class="strength-row-head">
+          <input type="text" class="strength-name-input" placeholder="Exercise" value="${esc(ex.name)}">
+          <input type="text" class="strength-target-input" placeholder="e.g. 4×5" value="${esc(ex.target)}">
+          <button type="button" class="strength-remove" data-sid="${id}" data-idx="${i}" aria-label="Remove exercise">×</button>
+        </div>
+        <div class="strength-inputs">
+          <input type="text" class="strength-load" placeholder="Load (kg)" value="${esc(ex.load)}" inputmode="decimal">
+          <input type="text" class="strength-reps" placeholder="Reps" value="${esc(ex.reps)}" inputmode="text">
+          <input type="text" class="strength-rpe" placeholder="RPE" value="${esc(ex.rpe)}" inputmode="numeric">
+        </div>
+        ${(lastHint || spark)?`<div class="strength-last-row">${lastHint?`<span class="strength-last">${lastHint}</span>`:''}${spark}</div>`:''}
+      </div>`;
+  }).join('');
+
+  return `<div class="strength-log">
+    ${rows}
+    <button type="button" class="strength-add" data-sid="${id}">+ add exercise</button>
+  </div>`;
+}
+
+// Find the most recent log for each exercise name across all previous strength sessions.
+// Now matches by entry.name (since the user can add/remove exercises freely).
+function lookupLastStrengthByName(currentId){
+  if(!progress.strength) return {};
+  // Build chronological list of all strength session ids
+  const allStrengthIds = [];
+  PLAN.weeks.forEach(function(wk){
+    wk.sessions.forEach(function(s,i){
+      if(s.t==='strength') allStrengthIds.push(sid(wk.n,i));
+    });
+  });
+  const curIdx = allStrengthIds.indexOf(currentId);
+  if(curIdx<=0) return {};
+  // Walk backwards, first-seen wins (most recent)
+  const result = {};
+  for(let i=curIdx-1; i>=0; i--){
+    const prevLog = progress.strength[allStrengthIds[i]];
+    if(!prevLog || !prevLog.length) continue;
+    prevLog.forEach(function(entry){
+      if(!entry || !entry.name) return;
+      if(!entry.load && !entry.reps && !entry.rpe) return;
+      const key = entry.name.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+      if(!key) return;
+      if(!result[key]) result[key] = { load: entry.load||'', reps: entry.reps||'', rpe: entry.rpe||'' };
+    });
+  }
+  return result;
+}
+
+function renderActualCompare(id){
+  const el = document.querySelector('.actual-compare[data-id="'+id+'"]'); if(!el) return;
+  const a = progress.actuals[id] || {};
+  if(!a.pace && !a.rpe){ el.innerHTML=''; return; }
+  const parts = [];
+  if(a.pace){
+    const presc = prescribedPace(id);
+    const range = parsePaceRange(presc), aSec = parsePace(a.pace);
+    if(range && aSec!==null){
+      if(aSec>=range.lo && aSec<=range.hi){
+        parts.push('<span class="on-target">in target window ('+esc(presc)+')</span>');
+      } else if(aSec>range.hi){
+        const d=aSec-range.hi, dm=Math.floor(d/60), ds=d%60;
+        parts.push('<span class="off-target">'+(dm>0?dm+':'+(ds<10?'0':'')+ds:ds+' s')+' slower than target</span>');
+      } else {
+        const d=range.lo-aSec, dm=Math.floor(d/60), ds=d%60;
+        parts.push('<span class="on-target">'+(dm>0?dm+':'+(ds<10?'0':'')+ds:ds+' s')+' faster than target</span>');
+      }
+    } else {
+      parts.push('logged '+esc(a.pace));
+    }
+  }
+  if(a.rpe){ parts.push('RPE '+a.rpe); }
+  el.innerHTML = parts.join('  ·  ');
+}
+
+function renderRaceVerdict(){
+  const el=document.getElementById('raceVerdict'); if(!el) return;
+  const sec=parseT(progress.raceTime);
+  if(sec===null){ el.textContent=''; return; }
+  const goal = PLAN.goalSec || 1200;
+  const celebrate = PLAN.goalCelebrateSec || (goal + 30);
+  const goalLabel = PLAN.goalNiceLabel || formatT(goal);
+  const celLabel = PLAN.goalCelebrateLabel || formatT(celebrate);
+  const perKm=Math.round(sec/5); const m=Math.floor(perKm/60), s=perKm%60;
+  const pace=m+':'+(s<10?'0':'')+s+'/km';
+  let line;
+  if(sec<=goal){
+    const gm=Math.floor((goal-sec)/60), gs=(goal-sec)%60;
+    const under=(gm>0?gm+' min ':'')+gs+' s';
+    line='🏆 '+formatT(sec)+'. You beat the '+goalLabel+' goal by '+under+'. Outstanding. '+pace+'.';
+  } else if(sec<celebrate){
+    line='🎉 '+formatT(sec)+'. Under '+celLabel+' at '+pace+'. A brilliant result, right around your goal. Celebrate this one.';
+  } else {
+    const gm=Math.floor((sec-celebrate)/60), gs=(sec-celebrate)%60;
+    const over=(gm>0?gm+' min ':'')+gs+' s';
+    line=formatT(sec)+' at '+pace+', '+over+' over '+celLabel+'. A finish to be proud of. Every block builds the next.';
+  }
+  el.textContent=line;
+}
+function formatT(sec){ const m=Math.floor(sec/60), s=sec%60; return m+':'+(s<10?'0':'')+s; }
+
+function renderRaceBoxVerdict(){
+  const el=document.getElementById('raceBoxVerdict'); if(!el) return;
+  const sec=parseT(progress.raceTime);
+  if(sec===null){ el.innerHTML=''; return; }
+  const goal = PLAN.goalSec || 1200;
+  const celebrate = PLAN.goalCelebrateSec || (goal + 30);
+  const goalLabel = PLAN.goalNiceLabel || formatT(goal);
+  const celLabel = PLAN.goalCelebrateLabel || formatT(celebrate);
+  const perKm=Math.round(sec/5); const m=Math.floor(perKm/60), s=perKm%60;
+  const pace=m+':'+(s<10?'0':'')+s+'/km';
+  let cls,msg;
+  if(sec<=goal){ cls='live'; msg='🏆 '+formatT(sec)+'. You hit the '+goalLabel+' goal at '+pace+'.'; }
+  else if(sec<celebrate){ cls='live'; msg='🎉 '+formatT(sec)+'. Under '+celLabel+' at '+pace+'. A brilliant result.'; }
+  else { cls='on'; msg=formatT(sec)+' at '+pace+'. A finish to be proud of. Every block builds the next.'; }
+  el.innerHTML='<div class="verdict '+cls+'">'+msg+'</div>';
+}
+
+function renderVerdict(wk){
+  const el = document.querySelector('.trialVerdict[data-week="'+wk+'"]'); if(!el) return;
+  const sec = parseT(progress.trials[wk]);
+  if(sec===null){ el.innerHTML=''; return; }
+  const perKm = Math.round(sec/5);
+  const pkM = Math.floor(perKm/60), pkS = perKm%60;
+  const paceStr = pkM+':'+(pkS<10?'0':'')+pkS+'/km';
+
+
+  // Checkpoint target verdict (if this trial week has a defined target)
+  const checkpoint = (PLAN.checkpoints || []).find(c => String(c.week) === String(wk));
+  let checkpointHTML = '';
+  if(checkpoint){
+    const tgt = checkpoint.targetSec;
+    const tgtLabel = checkpoint.targetLabel || formatT(tgt);
+    const diff = sec - tgt;
+    let verdictLine;
+    if(diff <= 0){
+      const absDiff = -diff;
+      const dm = Math.floor(absDiff/60), ds = absDiff%60;
+      const aheadStr = (dm>0?dm+' min ':'')+ds+' s';
+      verdictLine = '🎯 On target. You hit '+formatT(sec)+', ahead of the '+tgtLabel+' checkpoint by '+aheadStr+'.';
+    } else {
+      const dm = Math.floor(diff/60), ds = diff%60;
+      const behindStr = (dm>0?dm+' min ':'')+ds+' s';
+      if(diff <= 20){
+        verdictLine = 'On schedule. '+formatT(sec)+' is '+behindStr+' off the '+tgtLabel+' checkpoint.';
+      } else if(diff <= 45){
+        verdictLine = '⚠ Slightly behind. '+formatT(sec)+' is '+behindStr+' off the '+tgtLabel+' checkpoint. Consider holding the phase 1-2 more weeks.';
+      } else {
+        verdictLine = '⚠ Significantly behind. '+formatT(sec)+' is '+behindStr+' off the '+tgtLabel+' checkpoint. The race target may need to shift.';
+      }
+    }
+    checkpointHTML = '<div class="checkpoint-verdict">'+verdictLine+'</div>';
+  }
+
+  // Standard gap-to-goal projection
+  const goalSec = PLAN.goalSec || 1200;
+  const goalLabel = PLAN.goalNiceLabel || formatT(goalSec);
+  const gapSec = sec - goalSec;
+  let gapStr;
+  if(gapSec<=0){ gapStr = 'You are already at or under the '+goalLabel+' goal. Strong.'; }
+  else {
+    const gm=Math.floor(gapSec/60), gs=gapSec%60;
+    const gapPct = (gapSec/goalSec*100).toFixed(1);
+    gapStr = 'That is '+(gm>0?gm+' min ':'')+gs+' s from the '+goalLabel+' goal ('+gapPct+'% to find).';
+  }
+  el.innerHTML = checkpointHTML + `<div class="projection">Current 5 km pace ${paceStr}. ${gapStr}</div>`;
+}
+
+// Draw the 5K progression chart.
+function drawProgressChart(){
+  const svg = document.getElementById('progressChart');
+  const emptyEl = document.getElementById('chartEmpty');
+  if(!svg) return;
+  // Collect data points: {week, sec} for any logged trial
+  const points = [];
+  Object.entries(progress.trials || {}).forEach(([wk, t])=>{
+    const s = parseT(t);
+    if(s !== null) points.push({ week: parseInt(wk,10), sec: s });
+  });
+  // Add race time if present
+  const raceSec = parseT(progress.raceTime);
+  const raceWeek = Math.max.apply(null, PLAN.weeks.map(w => w.n));
+  if(raceSec !== null) points.push({ week: raceWeek, sec: raceSec, isRace: true });
+  points.sort((a,b) => a.week - b.week);
+
+  if(points.length === 0){
+    svg.innerHTML = '';
+    if(emptyEl) emptyEl.style.display = 'flex';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+
+  // Chart dimensions (SVG viewBox is 600x280)
+  const W = 600, H = 280;
+  const M = { top: 20, right: 50, bottom: 30, left: 50 };
+  const innerW = W - M.left - M.right;
+  const innerH = H - M.top - M.bottom;
+
+  // X axis: weeks 1..raceWeek
+  const maxWeek = raceWeek;
+  const xScale = wk => M.left + (wk - 1) / (maxWeek - 1) * innerW;
+
+  // Y axis: time range. Goal is 1200s (20:00). Show from ~19:30 (1170) up to slowest point or 24:00 (1440).
+  const goalSec = PLAN.goalSec || 1200;
+  const allSecs = points.map(p => p.sec).concat([goalSec - 30, goalSec + 60]);
+  const checkpoints = PLAN.checkpoints || [];
+  checkpoints.forEach(cp => allSecs.push(cp.targetSec));
+  const yMin = Math.min.apply(null, allSecs) - 15;
+  const yMax = Math.max.apply(null, allSecs) + 15;
+  const yScale = sec => M.top + (sec - yMin) / (yMax - yMin) * innerH;
+
+  // Build SVG content
+  let svgParts = [];
+
+  // Grid lines (5 horizontal)
+  for(let i = 0; i <= 4; i++){
+    const y = M.top + (i / 4) * innerH;
+    const secAt = yMin + ((4 - i) / 4) * (yMax - yMin);
+    const label = formatT(Math.round(secAt));
+    svgParts.push(`<line class="chart-grid" x1="${M.left}" y1="${y}" x2="${M.left + innerW}" y2="${y}"/>`);
+    svgParts.push(`<text class="chart-axis-text" x="${M.left - 6}" y="${y + 3}" text-anchor="end">${label}</text>`);
+  }
+
+  // X axis labels: every 4 weeks
+  for(let wk = 4; wk <= maxWeek; wk += 4){
+    const x = xScale(wk);
+    svgParts.push(`<text class="chart-axis-text" x="${x}" y="${H - M.bottom + 16}" text-anchor="middle">W${wk}</text>`);
+  }
+
+  // Target line at sub-20:00
+  const goalY = yScale(goalSec);
+  svgParts.push(`<line class="chart-target-line" x1="${M.left}" y1="${goalY}" x2="${M.left + innerW}" y2="${goalY}"/>`);
+  svgParts.push(`<text class="chart-target-text" x="${M.left + innerW + 4}" y="${goalY + 3}">sub-20</text>`);
+
+  // Checkpoint markers (small target dots on x-axis)
+  checkpoints.forEach(cp => {
+    const x = xScale(cp.week);
+    const cpY = yScale(cp.targetSec);
+    svgParts.push(`<circle class="chart-cp-marker" cx="${x}" cy="${cpY}" r="4"/>`);
+  });
+
+  // Best time (fastest point) for highlighting
+  const bestSec = Math.min.apply(null, points.map(p => p.sec));
+
+  // Connect points with line
+  if(points.length >= 2){
+    const pathD = points.map((p, i) =>
+      (i === 0 ? 'M' : 'L') + xScale(p.week) + ',' + yScale(p.sec)
+    ).join(' ');
+    svgParts.push(`<path class="chart-line" d="${pathD}"/>`);
+  }
+
+  // Draw points
+  points.forEach(p => {
+    const x = xScale(p.week), y = yScale(p.sec);
+    const cls = (p.sec === bestSec) ? 'chart-point-best' : 'chart-point';
+    svgParts.push(`<circle class="${cls}" cx="${x}" cy="${y}" r="5"/>`);
+    // Label above the point
+    svgParts.push(`<text class="chart-point-label" x="${x}" y="${y - 10}" text-anchor="middle">${formatT(p.sec)}</text>`);
+  });
+
+  svg.innerHTML = svgParts.join('\n');
+}
+
+// Update extra dashboard stats (VDOT + next checkpoint).
+function updateExtraStats(){
+  const vdotStat = document.getElementById('vdotStat');
+  if(vdotStat) vdotStat.textContent = String(PLAN.currentVdot || 41);
+  // Collapsible card value mirrors the current VDOT
+  const cardVal = document.getElementById('vdotCardValue');
+  if(cardVal) cardVal.textContent = String(PLAN.currentVdot || 41);
+
+  const nextEl = document.getElementById('nextCpVal');
+  const nextLbl = document.getElementById('nextCpLbl');
+  if(!nextEl) return;
+
+  // Find current week (1-indexed): infer from earliest week with no done sessions, fall back to 1
+  const checkpoints = PLAN.checkpoints || [];
+  if(!nextEl) return;
+  if(!checkpoints.length){ nextEl.textContent = '--'; return; }
+
+  // Find the next checkpoint where no trial has been logged yet
+  const upcoming = checkpoints.filter(cp => !(progress.trials && progress.trials[cp.week]));
+  if(upcoming.length === 0){
+    nextEl.textContent = '✓';
+    if(nextLbl) nextLbl.textContent = 'checkpoints done';
+    return;
+  }
+  const next = upcoming[0];
+  nextEl.textContent = next.targetLabel;
+  if(nextLbl) nextLbl.textContent = 'target week ' + next.week;
+}
+
+// Draw a small SVG sparkline showing strength load progression for one exercise name.
+// Returns an SVG string or empty.
+function drawStrengthSparkline(exerciseName, currentSid){
+  if(!progress.strength || !exerciseName) return '';
+  const key = exerciseName.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+  if(!key) return '';
+
+  // Collect all (sessionOrder, load) for this exercise name across all logged sessions, in chronological order
+  const allStrengthIds = [];
+  PLAN.weeks.forEach(wk => {
+    wk.sessions.forEach((s,i) => { if(s.t==='strength') allStrengthIds.push(sid(wk.n,i)); });
+  });
+  const points = [];
+  allStrengthIds.forEach((sessionId, order) => {
+    const log = progress.strength[sessionId];
+    if(!log) return;
+    log.forEach(entry => {
+      if(!entry || !entry.name) return;
+      const entryKey = entry.name.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+      if(entryKey === key){
+        const load = parseFloat(entry.load);
+        if(!isNaN(load) && load > 0) points.push({ order: order, load: load, sid: sessionId });
+      }
+    });
+  });
+
+  if(points.length < 2) return '';
+
+  // SVG dimensions
+  const W = 80, H = 24, P = 2;
+  const xs = points.map(p => p.order);
+  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  const minLoad = Math.min.apply(null, points.map(p => p.load));
+  const maxLoad = Math.max.apply(null, points.map(p => p.load));
+  const xScale = o => P + (maxX === minX ? W/2 : (o - minX)/(maxX - minX) * (W - 2*P));
+  const yScale = l => H - P - (maxLoad === minLoad ? (H - 2*P)/2 : (l - minLoad)/(maxLoad - minLoad) * (H - 2*P));
+
+  const pathD = points.map((p,i) => (i===0?'M':'L') + xScale(p.order).toFixed(1) + ',' + yScale(p.load).toFixed(1)).join(' ');
+  const areaD = pathD + ' L' + xScale(points[points.length-1].order).toFixed(1) + ',' + H + ' L' + xScale(points[0].order).toFixed(1) + ',' + H + ' Z';
+
+  // Highlight the dot that corresponds to currentSid if present
+  const dots = points.map(p => {
+    const isCurrent = p.sid === currentSid;
+    const cls = isCurrent ? 'spark-dot-current' : 'spark-dot';
+    const r = isCurrent ? 2.5 : 1.5;
+    return `<circle class="${cls}" cx="${xScale(p.order).toFixed(1)}" cy="${yScale(p.load).toFixed(1)}" r="${r}"/>`;
+  }).join('');
+
+  return `<svg class="strength-spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-label="Load trend"><path class="spark-area" d="${areaD}"/><path class="spark-line" d="${pathD}"/>${dots}</svg>`;
+}
+
+function updateDash(){
+  const total = PLAN.weeks.reduce((s,w)=>s+w.sessions.length,0);
+  const done = Object.keys(progress.done).length;
+  const pct = Math.round(done/total*100);
+  const dc = document.getElementById('doneCount'); if(dc) dc.textContent = done;
+  // current PB in dashboard: best (fastest) valid time across all trial weeks
+  const pbEl = document.getElementById('pbStat');
+  if(pbEl){
+    let bestSec = null, bestStr = '';
+    PLAN.weeks.filter(x=>x.isTrial).forEach(x=>{
+      const v = progress.trials && progress.trials[x.n];
+      const sec = parseT(v);
+      if(sec!==null && (bestSec===null || sec < bestSec)){ bestSec = sec; bestStr = v; }
+    });
+    pbEl.textContent = bestStr ? bestStr : '--';
+  }
+
+  // Analytics + today-view widgets stay in sync with progress
+  updateExtraStats();
+  drawProgressChart();
+  if(typeof renderTodayHero === 'function') renderTodayHero();
+  if(typeof renderWeekProgress === 'function') renderWeekProgress();
+  if(typeof renderStatGrid === 'function') renderStatGrid();
+  // totalCount lives inside the stat-card grid (rendered by renderStatGrid)
+  const tc2 = document.getElementById('totalCount'); if(tc2) tc2.textContent = total;
+
+  // race-day celebration: show when the race session is ticked
+  const cel = document.getElementById('celebrate');
+  if(cel){
+    let raceId=null;
+    PLAN.weeks.forEach(wk=> wk.sessions.forEach((s,i)=>{ if(s.t==='race') raceId=sid(wk.n,i); }));
+    const raceDone = raceId && progress.done[raceId];
+    cel.style.display = (raceDone && !editMode) ? 'block':'none';
+    if(raceDone){
+      const rt=document.getElementById('raceTimeInput');
+      if(rt && rt.value!==progress.raceTime) rt.value = progress.raceTime||'';
+      renderRaceVerdict();
+    }
+  }
+
+  // catch-up message (90% principle) - if an earlier week was left incomplete
+  const cm = document.getElementById('catchupMsg');
+  if(cm){
+    // find the furthest week with any completed session
+    let furthest=0;
+    PLAN.weeks.forEach(wk=>{
+      const any = wk.sessions.some((s,i)=>progress.done[sid(wk.n,i)]);
+      if(any) furthest=wk.n;
+    });
+    // behind = an earlier week than 'furthest' is still incomplete (skipped/missed)
+    let behind=false;
+    for(const wk of PLAN.weeks){
+      if(wk.n>=furthest) break;
+      const allDone = wk.sessions.every((s,i)=>progress.done[sid(wk.n,i)]);
+      if(!allDone){ behind=true; break; }
+    }
+    cm.style.display = (behind && !editMode && done<total) ? 'block':'none';
+  }
+
+  // next-session focus card (skip in edit mode)
+  const nc = document.getElementById('nextCard');
+  if(nc){
+    if(editMode || done===total){ nc.style.display='none'; }
+    else {
+      let found=null;
+      for(const wk of PLAN.weeks){
+        for(let i=0;i<wk.sessions.length;i++){
+          if(!progress.done[sid(wk.n,i)]){ found={wk,s:wk.sessions[i],i}; break; }
+        }
+        if(found) break;
+      }
+      if(found){
+        const s=found.s;
+        const bits=[];
+        if(s.pace) bits.push(resolvePace(s.pace));
+        if(s.hr) bits.push(s.hr);
+        document.getElementById('nextBody').innerHTML =
+          'Week '+esc(found.wk.n)+', '+esc(s.d)+': '+esc(s.title)+'<span class="next-meta">'+esc(bits.join('  ·  '))+'</span>';
+        nc.style.display='block';
+      } else { nc.style.display='none'; }
+    }
+  }
+}
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Reset all progress? This clears every ticked session and your time trial result.')){
+    progress = {done:{}, trials:{}, notes:{}, raceTime:'', actuals:{}, strength:{}}; saveProgress(); render();
+  }
+});
+
+// --- Progress backup: export / import ---
+document.getElementById('saveProgBtn').addEventListener('click', ()=>{
+  const backup = {
+    type: 'sub20_ken_tracker_progress',
+    version: 1,
+    savedAt: new Date().toISOString(),
+    done: progress.done || {},
+    trials: progress.trials || {},
+    notes: progress.notes || {},
+    raceTime: progress.raceTime || '',
+    actuals: progress.actuals || {},
+    strength: progress.strength || {}
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = 'my-progress-' + stamp + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('loadProgBtn').addEventListener('click', ()=>{
+  document.getElementById('loadProgInput').click();
+});
+
+document.getElementById('loadProgInput').addEventListener('change', (ev)=>{
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let data;
+    try{ data = JSON.parse(reader.result); }
+    catch(e){ alert('That file could not be read. Please choose a progress backup file.'); ev.target.value=''; return; }
+    if(!data || typeof data !== 'object' || (data.type && data.type !== 'sub20_ken_tracker_progress')){
+      alert('That does not look like a progress backup file.'); ev.target.value=''; return;
+    }
+    // Build valid session-id set from the current plan so unknown keys are skipped
+    const validIds = {};
+    PLAN.weeks.forEach(wk=> wk.sessions.forEach((s,i)=> validIds[sid(wk.n,i)] = true ));
+    const validTrialWeeks = {};
+    PLAN.weeks.forEach(wk=>{ if(wk.isTrial) validTrialWeeks[wk.n] = true; });
+
+    let doneCount = 0, skipped = 0;
+    const newDone = {};
+    const incomingDone = (data.done && typeof data.done==='object') ? data.done : {};
+    Object.keys(incomingDone).forEach(k=>{
+      if(validIds[k] && incomingDone[k]){ newDone[k] = true; doneCount++; }
+      else if(!validIds[k]) skipped++;
+    });
+    const newTrials = {};
+    const incomingTrials = (data.trials && typeof data.trials==='object') ? data.trials : {};
+    Object.keys(incomingTrials).forEach(k=>{
+      // trial keys are week numbers; keep if that week is still a trial week
+      if(validTrialWeeks[k] || validTrialWeeks[Number(k)]) newTrials[k] = incomingTrials[k];
+    });
+
+    const newNotes = {};
+    const incomingNotes = (data.notes && typeof data.notes==='object') ? data.notes : {};
+    Object.keys(incomingNotes).forEach(k=>{ if(validIds[k]) newNotes[k] = incomingNotes[k]; });
+    progress.done = newDone;
+    progress.trials = newTrials;
+    progress.notes = newNotes;
+    progress.raceTime = (typeof data.raceTime==='string') ? data.raceTime : '';
+    const newActuals = {};
+    const inA = (data.actuals && typeof data.actuals==='object') ? data.actuals : {};
+    Object.keys(inA).forEach(k=>{ if(validIds[k]) newActuals[k]=inA[k]; });
+    progress.actuals = newActuals;
+    // strength: validate and accept if present
+    const newStrength = {};
+    const inS = (data.strength && typeof data.strength==='object') ? data.strength : {};
+    Object.keys(inS).forEach(function(k){
+      if(validIds[k] && Array.isArray(inS[k])){
+        const cleaned = inS[k].map(function(e){
+          if(!e || typeof e !== 'object') return { name:'', target:'', load:'', reps:'', rpe:'' };
+          return {
+            name:   String(e.name||''),
+            target: String(e.target||''),
+            load:   String(e.load||''),
+            reps:   String(e.reps||''),
+            rpe:    String(e.rpe||'')
+          };
+        });
+        newStrength[k] = cleaned;
+      }
+    });
+    progress.strength = newStrength;
+    saveProgress();
+    render();
+    let msg = 'Progress loaded. ' + doneCount + ' completed session' + (doneCount===1?'':'s') + ' restored.';
+    if(skipped>0) msg += ' (' + skipped + ' entr' + (skipped===1?'y':'ies') + ' from a different plan version were skipped.)';
+    alert(msg);
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+});
+
+var _editToggle = document.getElementById('editToggle');
+if(_editToggle){
+  _editToggle.addEventListener('click', ()=>{
+    editMode = !editMode;
+    _editToggle.classList.toggle('on', editMode);
+    _editToggle.textContent = editMode? 'Done editing' : 'Edit plan';
+    var eb = document.getElementById('exportBtn'); if(eb) eb.style.display = editMode? 'block':'none';
+    var eh = document.getElementById('editHint'); if(eh) eh.style.display = editMode? 'block':'none';
+    render();
+  });
+}
+var _exportBtn = document.getElementById('exportBtn');
+if(_exportBtn){ _exportBtn.addEventListener('click', exportPlan); }
+
+function exportPlan(){
+  applyEdits();
+  const baked = JSON.stringify(PLAN);
+  // Clone the document and remove edit-only UI from the clone (robust, not regex)
+  const clone = document.documentElement.cloneNode(true);
+  // Remove edit-only UI from the clone
+  ['#exportBtn', '#editHint', '.bottom-actions'].forEach(sel=>{
+    const el = clone.querySelector(sel); if(el) el.remove();
+  });
+  // Find the script that contains PLAN and replace its PLAN definition with the baked data
+  const scripts = clone.querySelectorAll('script');
+  scripts.forEach(sc=>{
+    if(sc.textContent.indexOf('const PLAN = {') !== -1){
+      sc.textContent = sc.textContent.replace(/const PLAN = \{[\s\S]*?\n\};/, 'const PLAN = ' + baked + ';');
+    }
+  });
+  const src = '<!DOCTYPE html>\n' + clone.outerHTML;
+  const blob = new Blob([src], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'client-plan.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// load saved VDOT before initial render
+try{ const v = localStorage.getItem('sub20_ken_vdot'); if(v){ PLAN.currentVdot = parseInt(v,10); } }catch(e){}
+// Bottom nav app-view switching
+const APP_VIEW_KEY = 'sub20_ken_app_view';
+let appView = 'today';
+try {
+  const saved = localStorage.getItem(APP_VIEW_KEY);
+  if(saved === 'today' || saved === 'workouts' || saved === 'analytics') appView = saved;
+  // Migrate old keys
+  else if(saved === 'plan' || saved === 'stats') appView = saved === 'stats' ? 'analytics' : 'workouts';
+} catch(e){}
+
+function setAppView(view){
+  appView = view;
+  try { localStorage.setItem(APP_VIEW_KEY, view); } catch(e){}
+  document.body.setAttribute('data-app-view', view);
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('nav-tab-active', t.dataset.tab === view);
+  });
+  // Workouts view: show the full plan (all weeks expandable)
+  if(view === 'workouts'){
+    setViewMode('all');
+  }
+  window.scrollTo({ top: 0 });
+}
+
+document.querySelectorAll('.nav-tab').forEach(t => {
+  t.addEventListener('click', ()=> setAppView(t.dataset.tab));
+});
+
+// Bridge: expose internals so health-sync.js (a separate file) can read/write state
+window.SUB20 = { PLAN, progress, saveProgress, render, sid, PLAN_START_DATE };
+render();
+renderTodayHero();
+renderWeekProgress();
+renderStatGrid();
+applyViewMode();
+setAppView(appView);
+</script>
+<script src="health-sync.js"></script>
+</body>
+</html>
