@@ -1,2 +1,5 @@
 ﻿node_modules/
 ios/App/Pods/
+
+datum_health.json
+datum_workouts.csv
