@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Datum Training reads your runs and rides from Apple Health to fill in your actual paces and heart rate against your plan.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Datum Training does not write data to Apple Health.</string>
 </dict>
 </plist>
