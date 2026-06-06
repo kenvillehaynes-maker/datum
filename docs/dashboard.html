@@ -3,262 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Datum Training</title>
+<title>Datum · Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#14130f; --panel:#1c1b16; --panel2:#222019; --line:#322f27; --line2:#403c31;
-    --fg:#ece7da; --muted:#9a9484; --faint:#6f695b;
-    --green:#0f6e56; --green-bright:#3fa686; --amber:#ba7517; --red:#a32d2d; --blue:#185fa5;
+    --bg:#14130f; --panel:#1b1a15; --panel2:#222019; --line:#2e2b23; --line2:#403c31;
+    --fg:#f0ebde; --muted:#9a9484; --faint:#6f695b;
+    --run:#46c79a; --bike:#5aa6e0; --cross:#e0953f; --hiit:#e06464; --strength:#8e84e6; --row:#46c9c9; --other:#7d7768;
     --serif:'Fraunces',Georgia,serif; --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-    background-image:radial-gradient(circle at 12% -5%,rgba(63,166,134,0.08),transparent 38%),
-                     radial-gradient(circle at 95% 0%,rgba(24,95,165,0.06),transparent 35%);}
-  .wrap{max-width:1080px;margin:0 auto;padding:30px 22px 90px}
-  .kicker{font-family:var(--mono);font-size:0.64rem;letter-spacing:0.26em;text-transform:uppercase;color:var(--green-bright)}
-  h1{font-family:var(--serif);font-weight:700;font-size:2.3rem;letter-spacing:-0.02em;line-height:1.05;margin:4px 0}
-  h1 .sub{color:var(--faint);font-weight:500}
-  .meta{color:var(--muted);font-size:0.84rem;font-family:var(--mono);margin-top:6px}
-  h2{font-family:var(--serif);font-weight:600;font-size:1.2rem;margin:34px 0 12px;letter-spacing:-0.01em}
+  body{background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 12% -8%,rgba(70,199,154,0.09),transparent 40%),
+                     radial-gradient(circle at 95% 2%,rgba(90,166,224,0.06),transparent 36%);}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 16px 90px}
+  .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:18px}
+  .top .k{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.26em;text-transform:uppercase;color:var(--run)}
+  .top .m{font-family:var(--mono);font-size:0.7rem;color:var(--muted);text-align:right}
 
-  /* drop zone */
-  .drop{margin-top:26px;border:1.5px dashed var(--line2);border-radius:16px;padding:46px 24px;text-align:center;
-    cursor:pointer;transition:.15s;background:var(--panel)}
-  .drop:hover,.drop.over{border-color:var(--green-bright);background:rgba(63,166,134,0.05)}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;position:relative;
+    opacity:0;transform:translateY(10px);animation:rise .5s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .card h3{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between}
+  .card h3 b{color:var(--faint);font-weight:400}
+  .c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c5{grid-column:span 5}.c7{grid-column:span 7}.c3{grid-column:span 3}
+  @media(max-width:780px){.c8,.c6,.c5,.c7{grid-column:span 12}.c4,.c3{grid-column:span 6}}
+  @media(max-width:460px){.c4,.c3{grid-column:span 12}}
+
+  .big{font-family:var(--serif);font-weight:600;line-height:0.92;letter-spacing:-0.02em}
+  .stat .big{font-size:2.5rem}
+  .stat .u{font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:6px}
+  .stat .d{font-family:var(--mono);font-size:0.66rem;margin-top:8px}
+  .up{color:var(--run)}.down{color:var(--cross)}
+
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
+  .legend span{font-family:var(--mono);font-size:0.66rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+  .sessions{display:flex;flex-direction:column;gap:2px}
+  .srow{display:grid;grid-template-columns:64px 56px 1fr auto;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)}
+  .srow:last-child{border-bottom:none}
+  .srow .dt{font-family:var(--mono);font-size:0.7rem;color:var(--muted)}
+  .srow .tg{font-family:var(--mono);font-size:0.58rem;text-transform:capitalize;padding:3px 0;text-align:center;border-radius:6px;border:1px solid var(--line2)}
+  .srow .meter{height:7px;background:var(--panel2);border-radius:5px;overflow:hidden}
+  .srow .meter i{display:block;height:100%;border-radius:5px}
+  .srow .val{font-family:var(--mono);font-size:0.74rem;text-align:right;white-space:nowrap}
+  .srow .val b{color:var(--fg);font-weight:700}.srow .val s{color:var(--faint);text-decoration:none}
+
+  .drop{margin-top:40px;border:1.5px dashed var(--line2);border-radius:18px;padding:48px 22px;text-align:center;cursor:pointer;background:var(--panel)}
+  .drop:hover,.drop.over{border-color:var(--run);background:rgba(70,199,154,0.05)}
   .drop strong{font-family:var(--serif);font-size:1.15rem}
   .drop span{display:block;color:var(--muted);font-size:0.85rem;margin-top:8px}
-  .drop code{font-family:var(--mono);color:var(--green-bright)}
+  .drop code{font-family:var(--mono);color:var(--run)}
   input[type=file]{display:none}
-  .err{color:var(--red);font-family:var(--mono);font-size:0.82rem;margin-top:12px;min-height:1em;text-align:center}
-
-  /* stat grid */
-  .grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  .grid.s6{grid-template-columns:repeat(6,1fr)}
-  .grid.s4{grid-template-columns:repeat(4,1fr)}
-  @media(max-width:760px){.grid.s6{grid-template-columns:repeat(3,1fr)}.grid.s4{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:440px){.grid.s6,.grid.s4{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:var(--panel);padding:16px 18px}
-  .stat .l{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)}
-  .stat .v{font-family:var(--serif);font-size:1.7rem;font-weight:600;margin-top:5px;line-height:1}
-  .stat .v small{font-size:0.78rem;color:var(--muted);font-family:var(--mono);font-weight:400}
-  .stat .d{font-family:var(--mono);font-size:0.66rem;margin-top:4px}
-  .up{color:var(--green-bright)} .down{color:var(--amber)}
-
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media(max-width:760px){.two{grid-template-columns:1fr}}
-  svg.chart{width:100%;display:block;overflow:visible}
-  .chart-cap{font-family:var(--mono);font-size:0.66rem;color:var(--muted);margin-bottom:10px;letter-spacing:.04em}
-
-  /* category bars */
-  .cat{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
-  .cat:last-child{border-bottom:none}
-  .cat .name{width:92px;font-family:var(--mono);font-size:0.74rem;text-transform:capitalize}
-  .cat .bar{flex:1;height:9px;background:var(--panel2);border-radius:6px;overflow:hidden}
-  .cat .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--green-bright));border-radius:6px}
-  .cat .fig{font-family:var(--mono);font-size:0.72rem;color:var(--muted);width:150px;text-align:right}
-
-  table{width:100%;border-collapse:collapse;font-size:0.82rem}
-  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
-  th{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)}
-  td.n,th.n{text-align:right;font-family:var(--mono)}
-  .tag{font-family:var(--mono);font-size:0.6rem;padding:2px 7px;border-radius:20px;border:1px solid var(--line2);text-transform:capitalize}
+  .err{color:var(--hiit);font-family:var(--mono);font-size:0.8rem;text-align:center;margin-top:12px;min-height:1em}
   .hide{display:none}
-  .foot{margin-top:40px;color:var(--faint);font-size:0.78rem;border-top:1px solid var(--line);padding-top:16px;font-family:var(--mono)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="kicker">Datum Training</div>
-  <h1>Training <span class="sub">analysis</span></h1>
-  <div class="meta" id="meta">Load your export to begin</div>
+  <div class="top">
+    <div class="k">Datum · Analysis</div>
+    <div class="m" id="meta"></div>
+  </div>
 
   <label class="drop" id="drop">
-    <strong>Drop your datum_health.json here</strong>
-    <span>or click to choose it. Generate it first with <code>python datum_health.py</code>. Nothing leaves your browser.</span>
+    <strong>Drop datum_health.json</strong>
+    <span>or click to choose. Build it with <code>python datum_health.py</code>. Stays in your browser.</span>
     <input type="file" id="file" accept=".json,application/json">
   </label>
   <div class="err" id="err"></div>
 
-  <div id="dash" class="hide">
-    <div class="grid s6" id="headline"></div>
-
-    <h2>Pace trend</h2>
-    <div class="panel">
-      <div class="chart-cap">Clean runs, oldest to newest. Higher is faster.</div>
-      <svg class="chart" id="paceChart" viewBox="0 0 720 220" preserveAspectRatio="none"></svg>
-    </div>
-
-    <div class="two" style="margin-top:18px">
-      <div class="panel">
-        <div class="chart-cap">Weekly run volume (km)</div>
-        <svg class="chart" id="volChart" viewBox="0 0 360 200" preserveAspectRatio="none"></svg>
-      </div>
-      <div class="panel">
-        <div class="chart-cap">Sessions by category</div>
-        <div id="cats"></div>
-      </div>
-    </div>
-
-    <h2>Athlete trends</h2>
-    <div class="grid s4" id="athlete"></div>
-
-    <h2>Recent sessions</h2>
-    <div class="panel" style="padding:6px 18px">
-      <table id="sessions"><thead><tr>
-        <th>Date</th><th>Type</th><th class="n">Dist</th><th class="n">Time</th>
-        <th class="n">Pace</th><th class="n">HR</th><th class="n">kcal</th><th>Source</th>
-      </tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
-  <div class="foot" id="foot"></div>
+  <div class="grid hide" id="dash"></div>
 </div>
 
 <script>
-// ---------- helpers ----------
-const $ = s => document.querySelector(s);
-const fmtPace = s => { if(s==null) return "-"; let m=Math.floor(s/60),x=Math.round(s%60); if(x===60){m++;x=0;} return m+":"+String(x).padStart(2,"0"); };
-const fmtDur = s => { s=Math.round(s||0); let h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(x).padStart(2,"0")}`:`${m}:${String(x).padStart(2,"0")}`; };
-const isoWeek = d => { const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const day=(t.getUTCDay()+6)%7; t.setUTCDate(t.getUTCDate()-day+3); const f=new Date(Date.UTC(t.getUTCFullYear(),0,4)); return t.getUTCFullYear()+"-W"+String(1+Math.round(((t-f)/86400000-3+((f.getUTCDay()+6)%7))/7)).padStart(2,"0"); };
-const median = a => { if(!a.length) return null; const s=[...a].sort((x,y)=>x-y),m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+const $=s=>document.querySelector(s);
+const COL={run:"#46c79a",bike:"#5aa6e0",cross:"#e0953f",crosstrain:"#e0953f",hiit:"#e06464",strength:"#8e84e6",row:"#46c9c9",walk:"#9a9484",hike:"#9a9484",swim:"#5aa6e0",other:"#7d7768",elliptical:"#8e84e6",stairs:"#e0953f",jump:"#e06464",mobility:"#7d7768"};
+const col=m=>COL[m]||"#7d7768";
+const fmtPace=s=>{if(s==null)return"\u2013";let m=Math.floor(s/60),x=Math.round(s%60);if(x===60){m++;x=0;}return m+":"+String(x).padStart(2,"0");};
+const fmtDur=s=>{s=Math.round(s||0);let h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+"h"+String(m).padStart(2,"0"):m+"m";};
+const median=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+const dnum=d=>{const t=new Date(d);return Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())/86400000;};
+const isoWeek=d=>{const t=new Date(d);const u=new Date(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()));const day=(u.getUTCDay()+6)%7;u.setUTCDate(u.getUTCDate()-day);return u.getTime();};
 
-// ---------- load ----------
-const drop=$("#drop"), fileIn=$("#file");
-["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
-["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
-drop.addEventListener("drop",ev=>{ if(ev.dataTransfer.files[0]) read(ev.dataTransfer.files[0]); });
-fileIn.addEventListener("change",()=>{ if(fileIn.files[0]) read(fileIn.files[0]); });
+const drop=$("#drop"),fileIn=$("#file");
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,v=>{v.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,v=>{v.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",v=>{if(v.dataTransfer.files[0])read(v.dataTransfer.files[0]);});
+fileIn.addEventListener("change",()=>{if(fileIn.files[0])read(fileIn.files[0]);});
+fetch("datum_health.json").then(r=>r.ok?r.json():null).then(d=>{if(d)render(d);}).catch(()=>{});
+async function read(f){$("#err").textContent="";try{render(JSON.parse(await f.text()));}catch(e){$("#err").textContent="Could not read file: "+e.message;}}
 
-// auto-load if a datum_health.json sits next to the page (e.g. on your host)
-fetch("datum_health.json").then(r=>r.ok?r.json():null).then(d=>{ if(d) render(d); }).catch(()=>{});
-
-async function read(file){
-  $("#err").textContent="";
-  try{ render(JSON.parse(await file.text())); }
-  catch(e){ $("#err").textContent="Could not read that file: "+e.message; }
+const P=(cx,cy,r,a)=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];
+function arc(cx,cy,r,a0,a1,w,colr,cap){
+  cap=cap||"round";
+  const p0=P(cx,cy,r,a0),p1=P(cx,cy,r,a1);
+  const large=(a1-a0)%360>180?1:0;
+  return '<path d="M'+p0[0]+' '+p0[1]+' A'+r+' '+r+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+'" fill="none" stroke="'+colr+'" stroke-width="'+w+'" stroke-linecap="'+cap+'"/>';
+}
+function lineChart(pts,o){
+  o=o||{};const w=o.w||700,h=o.h||180,pad=o.pad||22,color=o.color||"#46c79a",fill=o.fill!==false,invert=!!o.invert,fmt=o.fmt||(v=>v);
+  if(pts.length<2)return '<svg viewBox="0 0 '+w+' '+h+'"><text x="'+(w/2)+'" y="'+(h/2)+'" text-anchor="middle" fill="#6f695b" font-family="monospace" font-size="12">not enough data</text></svg>';
+  const ys=pts.map(p=>p.v),mn=Math.min(...ys),mx=Math.max(...ys),sp=(mx-mn)||1;
+  const X=i=>pad+(w-2*pad)*(i/(pts.length-1));
+  const Y=v=>{const t=(v-mn)/sp;return pad+(h-2*pad)*(invert?t:1-t);};
+  const line=pts.map((p,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ");
+  const area="M"+X(0)+" "+(h-pad)+" "+pts.map((p,i)=>"L"+X(i).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ")+" L"+X(pts.length-1)+" "+(h-pad)+" Z";
+  const id="g"+Math.random().toString(36).slice(2,7);
+  const dots=pts.map((p,i)=>'<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="2.6" fill="'+color+'"/>').join("");
+  return '<svg viewBox="0 0 '+w+' '+h+'"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+color+'" stop-opacity=".26"/><stop offset="1" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>'+
+    (fill?'<path d="'+area+'" fill="url(#'+id+')"/>':"")+
+    '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2.2"/>'+dots+
+    '<text x="'+pad+'" y="13" fill="#9a9484" font-family="monospace" font-size="10.5">'+fmt(invert?mn:mx)+'</text>'+
+    '<text x="'+pad+'" y="'+(h-5)+'" fill="#9a9484" font-family="monospace" font-size="10.5">'+fmt(invert?mx:mn)+'</text></svg>';
 }
 
-// ---------- render ----------
 function render(data){
-  const w=(data.workouts||[]);
-  if(!w.length){ $("#err").textContent="No workouts in that file."; return; }
-  drop.classList.add("hide"); $("#dash").classList.remove("hide");
-
-  const runs=w.filter(x=>x.modality==="run");
-  const rides=w.filter(x=>x.modality==="bike");
-  const clean=runs.filter(x=>x.valid_for_pace);
-  const cdist=clean.reduce((s,x)=>s+x.distance_m,0), ctime=clean.reduce((s,x)=>s+x.duration_s,0);
-  const avgPace=cdist?ctime/(cdist/1000):null;
-  const best=clean.reduce((m,x)=> x.pace_s_per_km&&(m==null||x.pace_s_per_km<m)?x.pace_s_per_km:m, null);
+  const w=(data.workouts||[]);if(!w.length){$("#err").textContent="No workouts in file.";return;}
+  drop.classList.add("hide");const dash=$("#dash");dash.classList.remove("hide");dash.innerHTML="";
+  const runs=w.filter(x=>x.modality==="run"),clean=runs.filter(x=>x.valid_for_pace).sort((a,b)=>a.date<b.date?-1:1);
   const dates=w.map(x=>x.date).sort();
-  const m=data.meta||{};
-  $("#meta").textContent=`${dates[0]} to ${dates[dates.length-1]}  ·  ${w.length} sessions`+
-    (m.source_filter&&m.source_filter.length?`  ·  ${m.source_filter.join(", ")}`:"");
-
-  // headline
-  $("#headline").innerHTML=[
-    card("Sessions",w.length),
-    card("Runs",runs.length),
-    card("Rides",rides.length),
-    card("Run volume",(cdist/1000).toFixed(0),"km"),
-    card("Avg pace",fmtPace(avgPace),"/km"),
-    card("Best pace",fmtPace(best),"/km"),
-  ].join("");
-
-  paceChart(clean);
-  volChart(runs);
-  catBars(w);
-  athlete(data.athlete||{});
-  sessions(w);
-
-  $("#foot").textContent="Datum web · runs on data extracted locally by datum_health.py · "+
-    (clean.length+" clean runs of "+runs.length);
+  $("#meta").textContent=dates[0]+" \u2192 "+dates[dates.length-1]+" \u00b7 "+w.length+" sessions";
+  const cards=[heroFitness(data),statBest(clean),statVolume(runs),statResting(data.athlete||{}),
+    paceCard(clean),volumeCard(runs),mixDonut(w),zonesCard(w),efficiencyCard(clean),heatmapCard(w),sessionsCard(w)];
+  dash.innerHTML=cards.join("");
+  [...dash.children].forEach((c,i)=>c.style.animationDelay=(i*55)+"ms");
 }
+function wrapCard(cls,title,body,sub){return '<div class="card '+cls+'">'+(title?'<h3>'+title+(sub?'<b>'+sub+'</b>':"")+'</h3>':"")+body+'</div>';}
 
-function card(l,v,u,d){
-  return `<div class="stat"><div class="l">${l}</div><div class="v">${v}${u?` <small>${u}</small>`:""}</div>${d||""}</div>`;
+function heroFitness(data){
+  const s=((data.athlete||{}).vo2max||[]).map(r=>r[1]);
+  const v=s.length?median(s.slice(-5)):null;
+  const prior=s.slice(-12,-5),base=prior.length?median(prior):v;
+  if(v==null)return wrapCard("c4","Fitness","<div class='big' style='font-size:2rem;color:var(--faint)'>\u2013</div><div class='u'>no VO\u2082 max data</div>");
+  const lo=30,hi=62,t=Math.max(0,Math.min(1,(v-lo)/(hi-lo))),a1=135+270*t;
+  const cat=v>=56?"Elite":v>=50?"Excellent":v>=44?"Strong":v>=38?"Good":"Building";
+  const delta=base!=null?v-base:null;
+  const body='<svg viewBox="0 0 200 150">'+arc(100,105,72,135,405,11,"#2e2b23")+arc(100,105,72,135,a1,11,"#46c79a")+
+    '<text x="100" y="98" text-anchor="middle" fill="#f0ebde" font-family="Fraunces,serif" font-weight="600" font-size="42">'+v.toFixed(1)+'</text>'+
+    '<text x="100" y="118" text-anchor="middle" fill="#9a9484" font-family="monospace" font-size="9.5" letter-spacing="1">VO\u2082 MAX</text></svg>'+
+    '<div style="text-align:center;margin-top:2px"><span class="big" style="font-size:1.1rem;color:var(--run)">'+cat+'</span>'+
+    (delta!=null?'<div class="d '+(delta>=0?'up':'down')+'">'+(delta>=0?'\u25b2':'\u25bc')+' '+Math.abs(delta).toFixed(1)+' ml/kg/min</div>':"")+'</div>';
+  return wrapCard("c4","Fitness",body);
 }
-
-// pace line chart (faster = higher)
-function paceChart(clean){
-  const svg=$("#paceChart"); const pts=clean.filter(x=>x.pace_s_per_km).map(x=>({d:x.date,p:x.pace_s_per_km}));
-  if(pts.length<2){ svg.innerHTML=txt(360,110,"not enough clean runs yet"); return; }
-  const W=720,H=220,pad=26;
-  const min=Math.min(...pts.map(p=>p.p)), max=Math.max(...pts.map(p=>p.p)), span=(max-min)||1;
-  const X=i=>pad+(W-2*pad)*(i/(pts.length-1));
-  const Y=p=>pad+(H-2*pad)*((p-min)/span);
-  let path="", area="";
-  pts.forEach((p,i)=>{ const x=X(i),y=Y(p.p); path+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" "; });
-  area=`M${X(0)} ${H-pad} `+pts.map((p,i)=>`L${X(i).toFixed(1)} ${Y(p.p).toFixed(1)}`).join(" ")+` L${X(pts.length-1)} ${H-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.p).toFixed(1)}" r="3" fill="#3fa686"/>`).join("");
-  svg.innerHTML=`
-    <defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3fa686" stop-opacity="0.28"/><stop offset="1" stop-color="#3fa686" stop-opacity="0"/></linearGradient></defs>
-    <path d="${area}" fill="url(#pg)"/>
-    <path d="${path}" fill="none" stroke="#3fa686" stroke-width="2"/>${dots}
-    <text x="${pad}" y="16" fill="#9a9484" font-size="11" font-family="monospace">${fmtPace(min)} fastest</text>
-    <text x="${pad}" y="${H-6}" fill="#9a9484" font-size="11" font-family="monospace">${fmtPace(max)} slowest</text>`;
+function statBest(clean){
+  const best=clean.reduce((m,x)=>x.pace_s_per_km&&(m==null||x.pace_s_per_km<m)?x.pace_s_per_km:m,null);
+  const fiveK=clean.filter(x=>x.distance_m>=4800&&x.distance_m<=5400).sort((a,b)=>a.pace_s_per_km-b.pace_s_per_km)[0];
+  const body='<div class="stat"><div class="big">'+fmtPace(fiveK?fiveK.pace_s_per_km:best)+'<span style="font-size:1rem;color:var(--muted)"> /km</span></div><div class="u">'+(fiveK?"fastest 5K pace":"fastest pace")+'</div></div>';
+  return wrapCard("c4","Best",body,clean.length+" runs");
 }
-
-// weekly volume bars
-function volChart(runs){
-  const svg=$("#volChart"); const byWeek={};
-  runs.filter(x=>x.valid_for_pace||x.distance_m>=400).forEach(x=>{ const wk=isoWeek(new Date(x.date)); byWeek[wk]=(byWeek[wk]||0)+x.distance_m/1000; });
-  const weeks=Object.keys(byWeek).sort().slice(-14); if(!weeks.length){ svg.innerHTML=txt(180,100,"no run distance"); return; }
-  const W=360,H=200,pad=24,max=Math.max(...weeks.map(k=>byWeek[k]))||1;
-  const bw=(W-2*pad)/weeks.length;
-  let bars="";
-  weeks.forEach((k,i)=>{ const h=(H-2*pad)*(byWeek[k]/max); const x=pad+i*bw, y=H-pad-h;
-    bars+=`<rect x="${(x+bw*0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="#0f6e56"/>`; });
-  svg.innerHTML=`${bars}
-    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#403c31"/>
-    <text x="${pad}" y="14" fill="#9a9484" font-size="10" font-family="monospace">${max.toFixed(0)} km peak</text>`;
+function statVolume(runs){
+  const cut=Math.max(...runs.map(x=>dnum(x.date)),0)-28;
+  const km=runs.filter(x=>dnum(x.date)>=cut&&(x.valid_for_pace||x.distance_m>=400)).reduce((s,x)=>s+x.distance_m/1000,0);
+  return wrapCard("c4","Load",'<div class="stat"><div class="big">'+km.toFixed(0)+'<span style="font-size:1rem;color:var(--muted)"> km</span></div><div class="u">run distance \u00b7 last 4 weeks</div></div>');
 }
-
-function catBars(w){
-  const cats={};
-  w.forEach(x=>{ const c=cats[x.modality]=cats[x.modality]||{n:0,hr:[]}; c.n++; if(x.trusted&&x.hr_avg) c.hr.push(x.hr_avg); });
-  const max=Math.max(...Object.values(cats).map(c=>c.n));
-  $("#cats").innerHTML=Object.entries(cats).sort((a,b)=>b[1].n-a[1].n).map(([name,c])=>{
-    const hr=c.hr.length?Math.round(c.hr.reduce((s,v)=>s+v,0)/c.hr.length):null;
-    return `<div class="cat"><div class="name">${name}</div>
-      <div class="bar"><i style="width:${(c.n/max*100).toFixed(0)}%"></i></div>
-      <div class="fig">${c.n} sessions${hr?` · ${hr} bpm`:""}</div></div>`;
+function statResting(a){
+  const s=(a.resting_hr||[]).map(r=>r[1]);if(!s.length)return wrapCard("c4","Recovery","<div class='big' style='font-size:2rem;color:var(--faint)'>\u2013</div>");
+  const v=median(s.slice(-5)),prior=s.slice(-12,-5),base=prior.length?median(prior):v,d=v-base;
+  return wrapCard("c4","Recovery",'<div class="stat"><div class="big">'+Math.round(v)+'<span style="font-size:1rem;color:var(--muted)"> bpm</span></div><div class="u">resting heart rate</div>'+
+    (prior.length?'<div class="d '+(d<=0?'up':'down')+'">'+(d<=0?'\u25bc':'\u25b2')+' '+Math.abs(d).toFixed(0)+' bpm</div>':"")+'</div>');
+}
+function paceCard(clean){
+  const pts=clean.filter(x=>x.pace_s_per_km).map(x=>({v:x.pace_s_per_km}));
+  return wrapCard("c8","Pace trend","<div style='margin:-2px 0'>"+lineChart(pts,{color:"#46c79a",invert:false,fmt:fmtPace})+"</div>","higher = faster");
+}
+function volumeCard(runs){
+  const byW={};runs.filter(x=>x.valid_for_pace||x.distance_m>=400).forEach(x=>{const k=isoWeek(x.date);byW[k]=(byW[k]||0)+x.distance_m/1000;});
+  const weeks=Object.keys(byW).map(Number).sort((a,b)=>a-b).slice(-16);
+  if(!weeks.length)return wrapCard("c12","Weekly run volume","<svg viewBox='0 0 700 60'><text x='350' y='34' text-anchor='middle' fill='#6f695b' font-family='monospace' font-size='12'>no run distance</text></svg>");
+  const W=700,H=170,pad=24,mx=Math.max(...weeks.map(k=>byW[k]))||1,bw=(W-2*pad)/weeks.length;
+  let bars="",lbl="";
+  weeks.forEach((k,i)=>{const v=byW[k],hh=(H-2*pad)*(v/mx),x=pad+i*bw,y=H-pad-hh;
+    bars+='<rect x="'+(x+bw*0.16).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw*0.68).toFixed(1)+'" height="'+Math.max(hh,1).toFixed(1)+'" rx="3" fill="#0f6e56"/>';
+    if(i%2===0){const dd=new Date(k);lbl+='<text x="'+(x+bw*0.5).toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" fill="#6f695b" font-family="monospace" font-size="9">'+dd.getDate()+'/'+(dd.getMonth()+1)+'</text>';}});
+  return wrapCard("c12","Weekly run volume",'<svg viewBox="0 0 '+W+' '+H+'">'+bars+'<line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="#2e2b23"/><text x="'+pad+'" y="13" fill="#9a9484" font-family="monospace" font-size="10.5">'+mx.toFixed(0)+' km</text>'+lbl+'</svg>',"km per week");
+}
+function mixDonut(w){
+  const by={};w.filter(x=>x.trusted).forEach(x=>{by[x.modality]=(by[x.modality]||0)+(x.duration_s||0);});
+  const entries=Object.entries(by).sort((a,b)=>b[1]-a[1]),total=entries.reduce((s,e)=>s+e[1],0)||1;
+  let a=-90,seg="";
+  entries.forEach(e=>{const sweep=e[1]/total*360;seg+=arc(90,90,66,a,a+sweep-(sweep>4?2:0),20,col(e[0]),"butt");a+=sweep;});
+  const svg='<svg viewBox="0 0 180 180">'+seg+'<text x="90" y="86" text-anchor="middle" fill="#f0ebde" font-family="Fraunces,serif" font-weight="600" font-size="30">'+(total/3600).toFixed(0)+'</text><text x="90" y="104" text-anchor="middle" fill="#9a9484" font-family="monospace" font-size="9">HOURS</text></svg>';
+  const leg='<div class="legend">'+entries.map(e=>'<span><i class="dot" style="background:'+col(e[0])+'"></i>'+e[0]+' '+Math.round(e[1]/total*100)+'%</span>').join("")+'</div>';
+  return wrapCard("c5","Training mix",svg+leg,"by time");
+}
+function zonesCard(w){
+  const hrmax=Math.max(190,...w.map(x=>x.hr_max||0));
+  const Z=[["Z1",0,.7,"#5aa6e0"],["Z2",.7,.8,"#46c79a"],["Z3",.8,.87,"#ccd14a"],["Z4",.87,.93,"#e0953f"],["Z5",.93,2,"#e06464"]];
+  const tot=Z.map(()=>0);
+  w.filter(x=>x.trusted&&x.hr_avg).forEach(x=>{const p=x.hr_avg/hrmax,zi=Z.findIndex(z=>p>=z[1]&&p<z[2]);if(zi>=0)tot[zi]+=x.duration_s||0;});
+  const max=Math.max(...tot)||1;
+  const rows=Z.map((z,i)=>'<div style="display:flex;align-items:center;gap:10px;margin:7px 0"><span style="font-family:var(--mono);font-size:0.66rem;color:'+z[3]+';width:22px">'+z[0]+'</span><div style="flex:1;height:14px;background:var(--panel2);border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:'+(tot[i]/max*100).toFixed(0)+'%;background:'+z[3]+';border-radius:5px"></i></div><span style="font-family:var(--mono);font-size:0.66rem;color:var(--muted);width:48px;text-align:right">'+fmtDur(tot[i])+'</span></div>').join("");
+  return wrapCard("c7","Intensity",rows,"time by HR zone");
+}
+function efficiencyCard(clean){
+  const pts=clean.filter(x=>x.hr_avg&&x.pace_s_per_km);
+  if(pts.length<3)return wrapCard("c5","Efficiency","<svg viewBox='0 0 320 200'><text x='160' y='100' text-anchor='middle' fill='#6f695b' font-family='monospace' font-size='12'>need more runs with HR</text></svg>","pace vs HR");
+  const W=320,H=200,pad=30;
+  const hr=pts.map(p=>p.hr_avg),pc=pts.map(p=>p.pace_s_per_km);
+  const hmn=Math.min(...hr),hmx=Math.max(...hr),pmn=Math.min(...pc),pmx=Math.max(...pc);
+  const X=v=>pad+(W-2*pad)*((v-hmn)/((hmx-hmn)||1));
+  const Y=v=>pad+(H-2*pad)*((v-pmn)/((pmx-pmn)||1));
+  const dots=pts.map(p=>'<circle cx="'+X(p.hr_avg).toFixed(1)+'" cy="'+Y(p.pace_s_per_km).toFixed(1)+'" r="4" fill="#46c79a" fill-opacity="0.8"/>').join("");
+  return wrapCard("c5","Efficiency",'<svg viewBox="0 0 '+W+' '+H+'"><line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="#2e2b23"/><line x1="'+pad+'" y1="'+pad+'" x2="'+pad+'" y2="'+(H-pad)+'" stroke="#2e2b23"/>'+dots+'<text x="'+(W-pad)+'" y="'+(H-9)+'" text-anchor="end" fill="#6f695b" font-family="monospace" font-size="9">'+hmx+' bpm \u2192</text><text x="'+(pad-4)+'" y="'+(pad+2)+'" text-anchor="end" fill="#6f695b" font-family="monospace" font-size="9" transform="rotate(-90 '+(pad-4)+' '+(pad+2)+')">faster \u2192</text></svg>',"pace vs HR");
+}
+function heatmapCard(w){
+  const day={};w.forEach(x=>{day[dnum(x.date)]=(day[dnum(x.date)]||0)+(x.duration_s||0)/60;});
+  const end=Math.max(...w.map(x=>dnum(x.date))),endDow=(new Date(end*86400000).getUTCDay()+6)%7,lastSun=end-endDow,weeks=17,start=lastSun-(weeks-1)*7;
+  const cell=15,gap=4,W=weeks*(cell+gap)+30,H=7*(cell+gap)+24,mx=Math.max(...Object.values(day),1);
+  const shade=v=>{if(!v)return"#222019";const t=Math.min(1,v/Math.min(mx,90));return "rgba(70,199,154,"+(0.22+0.78*t).toFixed(2)+")";};
+  let cells="",mlab="",lastMonth=-1;
+  for(let wk=0;wk<weeks;wk++){
+    for(let d=0;d<7;d++){const dd=start+wk*7+d;if(dd>end+0.5)continue;cells+='<rect x="'+(30+wk*(cell+gap))+'" y="'+(16+d*(cell+gap))+'" width="'+cell+'" height="'+cell+'" rx="3" fill="'+shade(day[dd]||0)+'"/>';}
+    const mo=new Date((start+wk*7)*86400000).getUTCMonth();
+    if(mo!==lastMonth){lastMonth=mo;mlab+='<text x="'+(30+wk*(cell+gap))+'" y="11" fill="#6f695b" font-family="monospace" font-size="9">'+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][mo]+'</text>';}
+  }
+  const dnames=["M","","W","","F","",""];
+  const dl=dnames.map((s,i)=>s?'<text x="20" y="'+(16+i*(cell+gap)+11)+'" text-anchor="end" fill="#6f695b" font-family="monospace" font-size="8">'+s+'</text>':"").join("");
+  return wrapCard("c12","Consistency",'<svg viewBox="0 0 '+W+' '+H+'">'+mlab+dl+cells+'</svg>',"training days, last 17 weeks");
+}
+function sessionsCard(w){
+  const hrmax=Math.max(190,...w.map(x=>x.hr_max||0));
+  const rows=[...w].sort((a,b)=>a.date<b.date?1:-1).slice(0,12).map(x=>{
+    const intensity=x.hr_avg?Math.min(1,(x.hr_avg/hrmax-0.5)/0.45):0.1,c=col(x.modality);
+    const right=x.modality==="run"&&x.pace_s_per_km?'<b>'+fmtPace(x.pace_s_per_km)+'</b> <s>/km</s>':'<b>'+fmtDur(x.duration_s)+'</b>';
+    const dd=new Date(x.date);
+    return '<div class="srow"><span class="dt">'+dd.getDate()+'/'+(dd.getMonth()+1)+'</span><span class="tg" style="color:'+c+';border-color:'+c+'66">'+x.modality+'</span><div class="meter"><i style="width:'+(intensity*100).toFixed(0)+'%;background:'+c+'"></i></div><span class="val">'+right+' \u00b7 '+(x.hr_avg||"\u2013")+' <s>bpm</s></span></div>';
   }).join("");
+  return wrapCard("c7","Recent","<div class='sessions'>"+rows+"</div>");
 }
-
-function athlete(a){
-  const defs=[["vo2max","VO2 max","ml/kg/min",1],["resting_hr","Resting HR","bpm",-1],["hrv","HRV","ms",1],["body_mass","Body mass","kg",0]];
-  $("#athlete").innerHTML=defs.map(([k,label,unit,good])=>{
-    const series=(a[k]||[]).map(r=>r[1]); if(!series.length) return card(label,"-",unit);
-    const latest=median(series.slice(-5)); // robust to a single bad reading
-    const prior=series.slice(-12,-5); const base=prior.length?median(prior):latest;
-    const delta=latest-base;
-    let d=""; if(prior.length){ const cls=(good===0)?"":((delta*good>=0)?"up":"down");
-      d=`<div class="d ${cls}">${delta>=0?"+":""}${delta.toFixed(1)} vs prior</div>`; }
-    return card(label,(+latest.toFixed(1)),unit,d);
-  }).join("");
-}
-
-function sessions(w){
-  const rows=[...w].sort((a,b)=>a.date<b.date?1:-1).slice(0,22).map(x=>{
-    const dist=x.distance_m>=100?(x.distance_m/1000).toFixed(2):"-";
-    return `<tr><td>${x.date}</td><td><span class="tag">${x.modality}</span></td>
-      <td class="n">${dist}</td><td class="n">${fmtDur(x.duration_s)}</td>
-      <td class="n">${fmtPace(x.pace_s_per_km)}</td><td class="n">${x.hr_avg||"-"}</td>
-      <td class="n">${x.energy_kcal||"-"}</td><td>${(x.source||"").replace(/Â|â€™/g,"")}</td></tr>`;
-  }).join("");
-  $("#sessions tbody").innerHTML=rows;
-}
-
-const txt=(x,y,s)=>`<text x="${x}" y="${y}" text-anchor="middle" fill="#6f695b" font-size="13" font-family="monospace">${s}</text>`;
 </script>
 </body>
 </html>
