@@ -92,21 +92,24 @@
       }
       matched++;
     });
-    APP.saveProgress(); APP.render();
+    APP.saveProgress();
+    try { APP.render(); } catch (e) { console.warn('[datum-sync] render', e); }
     return matched;
   }
 
-  function banner(n) {
-    var host = document.querySelector('.app-view-analytics') || document.body;
+  function banner(n, range) {
+    var host = document.querySelector('.wrap') || document.body;
     var el = document.getElementById('datumSync');
-    if (!el) { el = document.createElement('div'); el.id = 'datumSync'; host.prepend(el); }
+    if (!el) { el = document.createElement('div'); el.id = 'datumSync'; host.insertBefore(el, host.firstChild); }
     el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;' +
-      'margin:14px 0;padding:11px 14px;border-radius:11px;border:1px solid #3FA68655;' +
+      'margin:0 0 14px;padding:11px 14px;border-radius:11px;border:1px solid #3FA68555;' +
       'background:rgba(63,166,134,0.10);color:#cfe9df;font-size:0.8rem';
-    el.innerHTML = '<span><b style="color:#fff">' + n + '</b> session' + (n === 1 ? '' : 's') +
-      ' auto-filled from your data</span>' +
+    var msg = n > 0
+      ? '<b style="color:#fff">' + n + '</b> session' + (n === 1 ? '' : 's') + ' auto-filled from your data'
+      : 'No sessions matched yet' + (range ? ' <span style="color:#9a9484">· data ' + range + ', plan starts 1 Jun</span>' : '');
+    el.innerHTML = '<span>' + msg + '</span>' +
       '<button id="datumResync" style="border:1px solid #3FA686;background:#0F6E56;color:#fff;' +
-      'border-radius:8px;padding:6px 12px;font:inherit;font-size:0.74rem;cursor:pointer">Re-sync</button>';
+      'border-radius:8px;padding:6px 12px;font:inherit;font-size:0.74rem;cursor:pointer;flex:none">Re-sync</button>';
     var btn = el.querySelector ? el.querySelector('#datumResync') : null;
     if (btn) btn.onclick = run;
   }
@@ -114,8 +117,13 @@
   function run() {
     return fetch('datum_health.json')
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { banner(d ? fill(normalise(d)) : 0); })
-      .catch(function (e) { console.warn('[datum-sync]', e); });
+      .then(function (d) {
+        if (!d) { banner(0, ''); return; }
+        var ds = (d.workouts || []).map(function (w) { return w.date; }).sort();
+        var range = ds.length ? (ds[0] + '–' + ds[ds.length - 1]) : '';
+        banner(fill(normalise(d)), range);
+      })
+      .catch(function (e) { console.warn('[datum-sync]', e); banner(0, ''); });
   }
 
   window.DATUM_SYNC = { run: run, fill: fill, normalise: normalise };
