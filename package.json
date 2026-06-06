@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "datum-training",
   "version": "1.0.0",
   "private": true,
@@ -10,11 +10,11 @@
     "copy": "cap copy"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/ios": "^8.0.0",
-    "capacitor-health": "^2.0.0"
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
+    "capacitor-health": "^8.1.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^8.4.0"
   }
 }
